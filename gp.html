@@ -1,0 +1,324 @@
+<!DOCTYPE html><html><head><title>Gran Premio</title><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="style.css"><script src="circuitos.js"></script><link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script><style>
+
+.progresoBox{
+margin-top:10px;
+background:#111;
+height:12px;
+border-radius:10px;
+overflow:hidden;
+}
+
+.progresoBar{
+height:12px;
+background:linear-gradient(90deg,#00f5d4,#9b5de5);
+}
+
+.enCurso{
+color:#ff2b2b;
+font-weight:bold;
+}
+
+.completado{
+opacity:0.5;
+text-decoration:line-through;
+}
+
+#mapa{
+height:300px;
+margin-top:15px;
+border-radius:12px;
+}
+
+</style></head><body><h1 id="tituloGP">Cargando Gran Premio...</h1><div id="detalleGP" class="card">
+Cargando información...
+</div><div id="mapa"></div><div id="posicionesLive" class="card">
+Cargando posiciones...
+</div><div id="livetiming" class="card">
+Cargando live timing...
+</div><a href="calendario.html" class="btn">⬅ Volver al Calendario</a>
+
+<script>
+
+const params=new URLSearchParams(window.location.search);
+const round=params.get("round");
+
+const detalle=document.getElementById("detalleGP");
+const titulo=document.getElementById("tituloGP");
+
+if(!round){
+
+detalle.innerHTML="Ronda no válida";
+
+}else{
+
+fetch(`https://api.jolpi.ca/ergast/f1/current/${round}.json`)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+const carrera=data.MRData.RaceTable.Races[0];
+
+titulo.innerHTML="🏁 "+carrera.raceName+(carrera.Sprint?" ⚡ Sprint Weekend":"");
+
+const ahora=new Date();
+
+function convertir(fecha,hora){
+
+if(!fecha || !hora) return null;
+
+const f=new Date(fecha+"T"+hora);
+
+return{
+fecha:f,
+texto:f.toLocaleString("es-ES",{
+timeZone:"Europe/Madrid",
+day:"2-digit",
+month:"2-digit",
+hour:"2-digit",
+minute:"2-digit"
+})
+};
+
+}
+
+let sesiones=[];
+
+function add(nombre,fecha,hora,icono,duracion=2){
+
+const d=convertir(fecha,hora);
+
+if(d){
+
+sesiones.push({
+nombre,
+icono,
+fecha:d.fecha,
+texto:d.texto,
+duracion
+});
+
+}
+
+}
+
+add("FP1",carrera.FirstPractice?.date,carrera.FirstPractice?.time,"🏎",1.5);
+add("FP2",carrera.SecondPractice?.date,carrera.SecondPractice?.time,"🏎",1.5);
+add("FP3",carrera.ThirdPractice?.date,carrera.ThirdPractice?.time,"🏎",1.5);
+add("Qualy",carrera.Qualifying?.date,carrera.Qualifying?.time,"⏱",1.5);
+add("Sprint Shootout",carrera.SprintQualifying?.date,carrera.SprintQualifying?.time,"🎯",1);
+add("Sprint",carrera.Sprint?.date,carrera.Sprint?.time,"⚡",1);
+add("Carrera",carrera.date,carrera.time,"🏁",3);
+
+sesiones=sesiones.filter(s=>s.fecha);
+sesiones.sort((a,b)=>a.fecha-b.fecha);
+
+let siguiente=null;
+let completadas=0;
+let estado="";
+
+sesiones.forEach(s=>{
+
+const inicio=s.fecha;
+const fin=new Date(inicio.getTime()+s.duracion*3600000);
+
+if(!siguiente && ahora<inicio) siguiente=s;
+
+if(ahora>=inicio && ahora<=fin){
+
+estado=`🔴 ${s.nombre} EN CURSO`;
+
+}
+
+if(ahora>fin) completadas++;
+
+});
+
+if(!estado){
+
+if(siguiente){
+
+estado=`🟡 Próximo evento: ${siguiente.nombre}`;
+
+}else{
+
+estado="⚫ Fin de semana finalizado";
+
+}
+
+}
+
+let html=`<p><strong>📍 ${carrera.Circuit.circuitName}</strong></p>
+<p>${estado}</p>`;
+
+let progreso=(completadas/sesiones.length)*100;
+
+html+=`
+<div class="progresoBox">
+<div class="progresoBar" style="width:${progreso}%"></div>
+</div>
+`;
+
+sesiones.forEach(s=>{
+
+const inicio=s.fecha;
+const fin=new Date(inicio.getTime()+s.duracion*3600000);
+
+let clase="";
+
+if(ahora>fin) clase="completado";
+
+if(ahora>=inicio && ahora<=fin) clase="enCurso";
+
+html+=`<p class="${clase}">
+${s.icono} ${s.nombre} — ${s.texto}
+</p>`;
+
+});
+
+detalle.innerHTML=html;
+
+/* MAPA */
+
+const lat=carrera.Circuit.Location.lat;
+const lon=carrera.Circuit.Location.long;
+
+const mapa=L.map("mapa").setView([lat,lon],13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+attribution:"© OpenStreetMap"
+}).addTo(mapa);
+
+L.marker([lat,lon]).addTo(mapa)
+.bindPopup(carrera.Circuit.circuitName);
+
+/* COCHES EN MAPA */
+
+let coches={};
+
+async function moverCoches(){
+
+try{
+
+const sesiones=await fetch(
+"https://api.openf1.org/v1/sessions?limit=1"
+).then(r=>r.json());
+
+const key=sesiones[0].session_key;
+
+const pos=await fetch(
+`https://api.openf1.org/v1/location?session_key=${key}`
+).then(r=>r.json());
+
+pos.forEach(p=>{
+
+if(!coches[p.driver_number]){
+
+coches[p.driver_number]=L.circleMarker(
+[p.y,p.x],
+{
+radius:5,
+color:"red"
+}
+).addTo(mapa);
+
+}else{
+
+coches[p.driver_number].setLatLng([p.y,p.x]);
+
+}
+
+});
+
+}catch{}
+
+}
+
+setInterval(moverCoches,2000);
+
+/* POSICIONES */
+
+async function posiciones(){
+
+try{
+
+const sesiones=await fetch(
+"https://api.openf1.org/v1/sessions?limit=1"
+).then(r=>r.json());
+
+const key=sesiones[0].session_key;
+
+const pos=await fetch(
+`https://api.openf1.org/v1/position?session_key=${key}&limit=20`
+).then(r=>r.json());
+
+let html="<h3>📡 Posiciones</h3>";
+
+pos.forEach(p=>{
+
+html+=`<p>#${p.driver_number} — P${p.position}</p>`;
+
+});
+
+document.getElementById("posicionesLive").innerHTML=html;
+
+}catch{}
+
+}
+
+posiciones();
+setInterval(posiciones,5000);
+
+/* LIVE TIMING */
+
+async function timing(){
+
+try{
+
+const sesiones=await fetch(
+"https://api.openf1.org/v1/sessions?limit=1"
+).then(r=>r.json());
+
+const key=sesiones[0].session_key;
+
+const laps=await fetch(
+`https://api.openf1.org/v1/laps?session_key=${key}&limit=20`
+).then(r=>r.json());
+
+let html="<h3>🟣 Live Timing</h3>";
+
+laps.forEach(l=>{
+
+html+=`<p>#${l.driver_number} ⏱ ${l.lap_time||"--"}</p>`;
+
+});
+
+document.getElementById("livetiming").innerHTML=html;
+
+}catch{}
+
+}
+
+timing();
+setInterval(timing,4000);
+
+/* CLIMA */
+
+fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+.then(r=>r.json())
+.then(c=>{
+
+detalle.innerHTML+=`
+<p>🌡 ${c.current_weather.temperature}°C
+💨 ${c.current_weather.windspeed} km/h</p>`;
+
+});
+
+});
+
+}
+
+</script></body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html><html><head><title>Race Control</title><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="css/style.css"><style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+.card{
+background:#111;
+padding:20px;
+border-radius:15px;
+margin-bottom:15px;
+box-shadow:0 0 15px #00bcd4;
+text-align:left;
+}
+
+.tipo{
+font-weight:bold;
+margin-bottom:6px;
+font-size:16px;
+}
+
+.mensaje{
+opacity:0.9;
+font-size:15px;
+}
+
+.tiempo{
+font-size:12px;
+opacity:0.6;
+margin-top:5px;
+}
+
+/* colores por evento */
+
+.flag{
+border-left:6px solid red;
+}
+
+.safety{
+border-left:6px solid yellow;
+}
+
+.drs{
+border-left:6px solid #00e5ff;
+}
+
+.incident{
+border-left:6px solid orange;
+}
+
+.other{
+border-left:6px solid #888;
+}
+
+.btn{
+display:block;
+background:#00bcd4;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+</style></head><body><h1>🚨 Race Control</h1><div id="contenido">Cargando eventos...
+
+</div><a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+async function cargarRaceControl(){
+
+try{
+
+/* obtener sesiones */
+
+const sesiones = await fetch(
+"https://api.openf1.org/v1/sessions?limit=5"
+).then(r=>r.json());
+
+const sesionActual = sesiones[0].session_key;
+
+/* obtener mensajes */
+
+const mensajes = await fetch(
+`https://api.openf1.org/v1/race_control_messages?session_key=${sesionActual}`
+).then(r=>r.json());
+
+if(!mensajes.length){
+
+document.getElementById("contenido").innerHTML=
+"<div class='card'>No hay mensajes aún.</div>";
+
+return;
+
+}
+
+let html="";
+
+/* ordenar más recientes */
+
+mensajes.reverse();
+
+mensajes.forEach(m=>{
+
+let icono="📢";
+let clase="other";
+
+if(m.category=="SafetyCar"){
+icono="🚗";
+clase="safety";
+}
+
+if(m.category=="Flag"){
+icono="🚩";
+clase="flag";
+}
+
+if(m.category=="Drs"){
+icono="📡";
+clase="drs";
+}
+
+if(m.category=="Incident"){
+icono="⚠️";
+clase="incident";
+}
+
+/* piloto si existe */
+
+let piloto = m.driver_number ? `#${m.driver_number} ` : "";
+
+html+=`
+
+<div class="card ${clase}">
+
+<div class="tipo">
+${icono} ${m.category}
+</div>
+
+<div class="mensaje">
+${piloto}${m.message}
+</div>
+
+<div class="tiempo">
+${new Date(m.date).toLocaleTimeString()}
+</div>
+
+</div>
+
+`;
+
+});
+
+document.getElementById("contenido").innerHTML=html;
+
+}
+
+catch{
+
+document.getElementById("contenido").innerHTML=
+"<div class='card'>No se pudo cargar Race Control.</div>";
+
+}
+
+}
+
+/* cargar al abrir */
+
+cargarRaceControl();
+
+/* actualizar cada 5 segundos */
+
+setInterval(cargarRaceControl,5000);
+
+</script></body></html>

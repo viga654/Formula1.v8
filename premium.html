@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Activar Premium</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+
+body{
+background:#0b0b0b;
+color:white;
+font-family:Arial;
+text-align:center;
+padding:40px;
+}
+
+h1{
+color:#00bcd4;
+}
+
+.card{
+background:#111;
+padding:30px;
+border-radius:15px;
+box-shadow:0 0 20px #00bcd4;
+max-width:400px;
+margin:auto;
+}
+
+input{
+width:80%;
+padding:12px;
+border-radius:10px;
+border:none;
+margin-top:10px;
+font-size:16px;
+}
+
+button{
+margin-top:15px;
+padding:12px 25px;
+border:none;
+border-radius:10px;
+background:#00bcd4;
+color:black;
+font-weight:bold;
+font-size:16px;
+}
+
+button:active{
+transform:scale(0.95);
+}
+
+.btn{
+display:inline-block;
+margin-top:25px;
+color:#00bcd4;
+text-decoration:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>⭐ Activar Premium</h1>
+
+<div class="card">
+
+<p>Introduce tu código premium</p>
+
+<input id="codigo" placeholder="Código">
+
+<br>
+
+<button onclick="activar()">Activar</button>
+
+</div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+function activar(){
+
+const codigo = document.getElementById("codigo").value.trim().toUpperCase();
+
+// lista de códigos válidos
+const codigosValidos = [
+"HUMANES",
+"humanes",
+"MOHEDAS"
+];
+
+if(codigosValidos.includes(codigo)){
+
+localStorage.setItem("premium", "true");
+
+alert("🏁 Premium activado correctamente");
+
+window.location.href="index.html";
+
+}else{
+
+alert("❌ DONDE VAS MACARENO❌");
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

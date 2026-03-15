@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Noticias F1</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+font-family:Arial;
+background:#0b0b0b;
+color:white;
+margin:0;
+padding:10px;
+}
+
+/* TITULO */
+
+h1{
+text-align:center;
+color:#00e5ff;
+margin-bottom:20px;
+}
+
+/* NOTICIA DESTACADA */
+
+.destacada{
+background:#151515;
+padding:20px;
+border-radius:14px;
+box-shadow:0 0 15px rgba(0,229,255,0.25);
+margin-bottom:25px;
+}
+
+.destacada img{
+width:100%;
+border-radius:10px;
+margin-bottom:10px;
+}
+
+.destacada h2{
+margin:10px 0;
+}
+
+/* TARJETAS */
+
+.card{
+background:#1c1c1c;
+margin:12px 0;
+padding:15px;
+border-radius:12px;
+box-shadow:0 0 12px rgba(0,229,255,0.15);
+animation:fade .4s ease;
+}
+
+.card img{
+width:100%;
+border-radius:8px;
+margin-bottom:10px;
+}
+
+.card h3{
+margin:8px 0;
+font-size:17px;
+}
+
+/* FUENTE */
+
+.source{
+font-size:12px;
+color:#aaa;
+margin-bottom:6px;
+}
+
+/* LINK */
+
+.card a,
+.destacada a{
+color:#00e5ff;
+text-decoration:none;
+font-weight:bold;
+}
+
+/* ANIMACION */
+
+@keyframes fade{
+from{opacity:0; transform:translateY(10px);}
+to{opacity:1; transform:translateY(0);}
+}
+
+/* LOADER */
+
+.loader{
+text-align:center;
+margin-top:40px;
+font-size:18px;
+color:#aaa;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1> Noticias F1</h1>
+
+<div id="news">
+<div class="loader">Cargando noticias...</div>
+</div>
+
+<script>
+
+const feeds = [
+
+{url:"https://es.motorsport.com/rss/f1/news/",source:"Motorsport"},
+{url:"https://soymotor.com/rss.xml",source:"SoyMotor"},
+{url:"https://e00-marca.uecdn.es/rss/motor/formula1.xml",source:"Marca"},
+{url:"https://www.mundodeportivo.com/rss/formula-1.xml",source:"Mundo Deportivo"}
+
+];
+
+let noticias=[];
+
+// Cargar feeds
+
+feeds.forEach(feed=>{
+
+fetch("https://api.allorigins.win/get?url="+encodeURIComponent(feed.url))
+
+.then(res=>res.json())
+
+.then(data=>{
+
+let parser=new DOMParser();
+let xml=parser.parseFromString(data.contents,"text/xml");
+
+let items=xml.querySelectorAll("item");
+
+items.forEach(n=>{
+
+let title=n.querySelector("title")?.textContent || "";
+let link=n.querySelector("link")?.textContent || "";
+let date=n.querySelector("pubDate")?.textContent || "";
+let desc=n.querySelector("description")?.textContent || "";
+
+let img="";
+
+let match=desc.match(/<img.*?src="(.*?)"/);
+
+if(match){
+img=match[1];
+}
+
+// evitar duplicados
+if(!noticias.some(x=>x.title==title)){
+
+noticias.push({
+
+title:title,
+link:link,
+date:date,
+img:img,
+source:feed.source
+
+});
+
+}
+
+});
+
+mostrar();
+
+})
+
+.catch(()=>{});
+
+});
+
+// Mostrar noticias
+
+function mostrar(){
+
+noticias.sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+let html="";
+
+// NOTICIA DESTACADA
+
+if(noticias.length){
+
+let n=noticias[0];
+
+html+=`
+
+<div class="destacada">
+
+${n.img?`<img src="${n.img}">`:""}
+
+<h2>${n.title}</h2>
+
+<div class="source">
+
+${n.source} • ${new Date(n.date).toLocaleDateString()}
+
+</div>
+
+<a href="${n.link}" target="_blank">
+Leer noticia
+</a>
+
+</div>
+
+`;
+
+}
+
+// RESTO NOTICIAS
+
+noticias.slice(1,8).forEach(n=>{
+
+html+=`
+
+<div class="card">
+
+<img src="${n.img}" loading="lazy">
+
+<h3>${n.title}</h3>
+
+<div class="source">
+
+${n.source} • ${new Date(n.date).toLocaleDateString()}
+
+</div>
+
+<a href="${n.link}" target="_blank">
+Leer noticia
+</a>
+
+</div>
+
+`;
+
+});
+
+document.getElementById("news").innerHTML=html;
+
+}
+
+// actualizar cada 10 minutos
+
+setInterval(()=>{
+
+noticias=[];
+document.getElementById("news").innerHTML='<div class="loader">Actualizando noticias...</div>';
+
+feeds.forEach(feed=>{
+fetch("https://api.allorigins.win/get?url="+encodeURIComponent(feed.url))
+.then(res=>res.json())
+.then(data=>{
+
+let parser=new DOMParser();
+let xml=parser.parseFromString(data.contents,"text/xml");
+
+xml.querySelectorAll("item").forEach(n=>{
+
+let title=n.querySelector("title")?.textContent || "";
+let link=n.querySelector("link")?.textContent || "";
+let date=n.querySelector("pubDate")?.textContent || "";
+let desc=n.querySelector("description")?.textContent || "";
+
+let img="";
+let match=desc.match(/<img.*?src="(.*?)"/);
+
+if(match) img=match[1];
+
+if(!noticias.some(x=>x.title==title)){
+
+noticias.push({title,link,date,img,source:feed.source});
+
+}
+
+});
+
+mostrar();
+
+});
+
+});
+
+},600000);
+
+</script>
+
+</body>
+</html>

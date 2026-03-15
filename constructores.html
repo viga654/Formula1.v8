@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Constructores - Formula 1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+/* CARD */
+
+.card{
+background:#111;
+padding:25px;
+border-radius:20px;
+box-shadow:0 0 25px #00e5ff;
+margin-bottom:20px;
+}
+
+/* BOTON */
+
+.btn{
+display:block;
+background:#00e5ff;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+/* NOMBRE EQUIPO */
+
+.team-name{
+font-size:18px;
+font-weight:bold;
+}
+
+/* PUNTOS */
+
+.points{
+font-size:14px;
+margin:6px 0;
+}
+
+/* BARRA */
+
+.bar-container{
+background:#222;
+border-radius:12px;
+height:14px;
+overflow:hidden;
+margin-top:8px;
+}
+
+.bar{
+height:100%;
+border-radius:12px;
+transition:width 0.6s ease;
+}
+
+/* LIDER */
+
+.lider{
+color:#00e5ff;
+font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🏎️ Clasificación Constructores</h1>
+
+<div id="contenido">Cargando datos...</div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+// ===============================
+// COLORES EQUIPOS
+// ===============================
+
+const coloresEquipos={
+
+"Oracle Red Bull Racing":"#1E41FF",
+"Scuderia Ferrari":"#DC0000",
+"Mercedes-AMG Petronas":"#00D2BE",
+"McLaren":"#FF8700",
+"Aston Martin Aramco":"#006F62",
+"BWT Alpine":"#0090FF",
+"Williams":"#005AFF",
+"TGR Haas":"#B6BABD",
+"Sauber":"#00ff00",
+"Visa Cash App Racing Bulls":"#2B4562",
+"Audi":"#BB0A30",
+"Cadillac":"#00205B"
+
+};
+
+// ===============================
+// API PRINCIPAL
+// ===============================
+
+async function cargarErgast(){
+
+try{
+
+const res=await fetch("https://api.jolpi.ca/ergast/f1/current/constructorStandings.json");
+
+if(!res.ok) throw "error";
+
+const data=await res.json();
+
+return data.MRData.StandingsTable.StandingsLists;
+
+}catch{
+
+return null;
+
+}
+
+}
+
+// ===============================
+// API SECUNDARIA
+// ===============================
+
+async function cargarOpenF1(){
+
+try{
+
+const res=await fetch("https://api.openf1.org/v1/teams");
+
+if(!res.ok) throw "error";
+
+return await res.json();
+
+}catch{
+
+return null;
+
+}
+
+}
+
+// ===============================
+// GENERAR TABLA
+// ===============================
+
+async function cargarConstructores(){
+
+let lista=await cargarErgast();
+
+if(!lista){
+
+console.log("Ergast fallo → usando OpenF1");
+
+const alt=await cargarOpenF1();
+
+if(!alt){
+
+document.getElementById("contenido").innerHTML=
+"<div class='card'>Error cargando clasificación.</div>";
+
+return;
+
+}
+
+document.getElementById("contenido").innerHTML=
+"<div class='card'>Datos alternativos cargados.</div>";
+
+return;
+
+}
+
+if(!lista || lista.length===0){
+
+document.getElementById("contenido").innerHTML=
+"<div class='card'>Clasificación aún no disponible.</div>";
+
+return;
+
+}
+
+const equipos=lista[0].ConstructorStandings;
+
+const maxPuntos=Math.max(...equipos.map(t=>parseInt(t.points)));
+
+let html="";
+
+equipos.forEach((team,index)=>{
+
+const puntos=parseInt(team.points);
+
+const porcentaje=(puntos/maxPuntos)*100;
+
+const nombre=team.Constructor.name;
+
+const color=coloresEquipos[nombre] || "#00e5ff";
+
+html+=`
+
+<div class="card">
+
+<div class="team-name ${index===0?'lider':''}">
+${team.position}. ${nombre}
+</div>
+
+<div class="points">
+${puntos} puntos
+</div>
+
+<div class="bar-container">
+<div class="bar" style="width:${porcentaje}%; background:${color};"></div>
+</div>
+
+</div>
+
+`;
+
+});
+
+document.getElementById("contenido").innerHTML=html;
+
+}
+
+// iniciar
+cargarConstructores();
+
+</script>
+
+</body>
+</html>

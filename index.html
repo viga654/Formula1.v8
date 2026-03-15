@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+
+<title>🏎️FORMULA 1🏎️</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#00bcd4">
+
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+
+<style>
+
+.modal {
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.85);
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.modal-content {
+  background:linear-gradient(145deg,#111,#050505);
+  padding:25px;
+  border-radius:15px;
+  text-align:center;
+
+  border:1px solid rgba(0,245,212,0.35);
+
+  box-shadow:
+  0 0 25px rgba(0,245,212,0.45),
+  inset 0 0 10px rgba(0,245,212,0.15);
+}
+
+.modal h3{
+  color:#00f5d4;
+}
+
+.modal select,
+.modal button {
+  margin-top:15px;
+  padding:10px;
+  border-radius:8px;
+  border:none;
+}
+
+.modal select{
+  background:#0b0b0b;
+  color:white;
+  border:1px solid rgba(0,245,212,0.4);
+}
+
+.modal button {
+  background:linear-gradient(135deg,#00f5d4,#9b5de5);
+  color:white;
+  font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+<div id="splash">
+   <div class="splash-logo">🏎</div>
+   <div class="splash-title">🇪🇸 Formula 1 Viga 🇪🇸</div>
+   <div class="circuit-line"></div>
+</div>
+
+<div class="header">
+   <div class="circuit-line"></div>
+   <h1 style="color:white;">🏎 Formula 1 🏎</h1>
+   <div class="circuit-line"></div>
+   
+    <p class="subfirma" style="color:#00e5ff;">🇪🇸VIGA🇪🇸</p>
+</div>
+
+<div id="favoritoBox" class="card" style="display:none;"></div>
+
+<div id="proximaCarrera" class="card">
+    Cargando próxima carrera...
+</div>
+   <div class="circuit-line"></div>
+<div id="contador" class="card"></div>
+   <div class="circuit-line"></div>
+
+<div class="menu-grid">
+<a href="noticias.html" class="btn especial">📰 Noticias F1</a>
+<a href="calendario.html" class="btn especial">📅<br>Calendario</a>
+<a href="ultima.html" class="btn especial">
+🏁<br>Última Sesión
+</a>
+<a href="clasificacion.html" class="btn especial">
+🏆<br>Clasificación</a>
+<a href="pilotos.html" class="btn especial">
+👤<br>Pilotos</a>
+<a href="constructores.html" class="btn especial">
+🏎<br>Constructores</a>
+<a href="comparador.html" class="btn especial">
+⚔<br>Comparador</a>
+<a href="alonso.html" class="btn especial">
+🪄<br>F.Alonso.14
+</a>
+<a href="analisis.html" class="btn especial">
+🎙<br>Análisis</a>
+<a href="#" onclick="abrirDirecto()" class="btn especial">
+📺<br>Directo 🔒</a>
+<a href="racecontrol.html" class="btn">
+🚨 Race Control</a>
+<a href="#" onclick="abrirTV()" class="btn especial">
+📺<br>TV 🔒
+</a>
+<a href="telemetria.html" class="btn especial">
+📊<br>Telemetría
+</a>
+<a href="livetiming.html" class="btn especial">
+📡<br>Live Timing
+</a>
+<a href="mapa.html" class="btn especial">
+🗺<br>Mapa en vivo
+</a>
+<a href="https://www.formula1.com" target="_blank" rel="noopener noreferrer" class="btn secundaria">
+🌍<br>Web Oficial
+</a>
+</div>
+
+<footer class="firma">
+    Creación 🇪🇦Viga🇪🇦 © 2026 — V7
+    <div class="circuit-line"></div>
+</footer>
+
+<!-- MODAL EQUIPO -->
+<div id="modalEquipo" class="modal">
+
+<div class="modal-content">
+
+<h3>⭐ Elige tu equipo favorito</h3>
+
+<select id="equipoSelect">
+
+<option>Oracle Red Bull Racing</option>
+<option>Visa Cash App Racing Bulls</option>
+<option>Scuderia Ferrari</option>
+<option>Mercedes-AMG Petronas</option>
+<option>McLaren</option>
+<option>Aston Martin Aramco</option>
+<option>BWT Alpine</option>
+<option>Williams</option>
+<option>TGR Haas</option>
+<option>Audi</option>
+<option>Cadillac</option>
+
+</select>
+
+<br><br>
+
+<button onclick="guardarEquipo()">Guardar</button>
+
+</div>
+
+</div>
+
+<script>
+
+function guardarEquipo() {
+    equipo = document.getElementById("equipoSelect").value;
+    localStorage.setItem("equipoFavorito", equipo);
+    document.getElementById("modalEquipo").style.display = "none";
+    aplicarColor();
+}
+
+
+
+
+// ===== PERMISO NOTIFICACIONES =====
+if ("Notification" in window) {
+
+if (Notification.permission !== "granted") {
+Notification.requestPermission();
+}
+
+}
+
+
+// ===== REGISTRO PWA =====
+if ('serviceWorker' in navigator) {
+
+navigator.serviceWorker.register('sw.js').then(reg => {
+
+reg.addEventListener('updatefound', () => {
+
+const newWorker = reg.installing;
+
+newWorker.addEventListener('statechange', () => {
+
+if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+
+mostrarAvisoActualizacion();
+
+}
+
+});
+
+});
+
+});
+
+}
+
+
+function mostrarAvisoActualizacion(){
+
+const aviso = document.createElement("div");
+
+aviso.innerHTML = `
+<div style="
+position:fixed;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+background:#e10600;
+padding:15px 20px;
+border-radius:10px;
+color:white;
+font-weight:bold;
+z-index:9999;
+box-shadow:0 0 20px rgba(225,6,0,0.7);
+">
+🚀 Nueva versión disponible
+
+<button onclick="window.location.reload()" style="
+margin-left:15px;
+padding:6px 12px;
+border:none;
+border-radius:6px;
+font-weight:bold;
+cursor:pointer;
+">
+Actualizar
+</button>
+
+</div>
+`;
+
+document.body.appendChild(aviso);
+
+}
+
+// ===== COLORES EQUIPOS =====
+const coloresEquipos = {
+    "Oracle Red Bull Racing": "#1E41FF",
+    "Visa Cash App Racing Bulls": "#2B4562",
+    "Scuderia Ferrari": "#DC0000",
+    "Mercedes-AMG Petronas": "#00D2BE",
+    "McLaren": "#FF8700",
+    "Aston Martin Aramco": "#006F62",
+    "BWT Alpine": "#0090FF",
+    "Williams": "#005AFF",
+    "TGR Haas": "#B6BABD",
+    "Audi": "#BB0A30",
+    "Cadillac": "#00205B"
+};
+
+let equipo = localStorage.getItem("equipoFavorito");
+
+// ===== FUNCION NOTIFICACION =====
+function enviarNotificacion(titulo, mensaje){
+
+if(Notification.permission === "granted"){
+
+new Notification(titulo,{
+body:mensaje,
+icon:"icon-192.png"
+});
+
+}
+
+}
+
+// ===== MODAL =====
+window.addEventListener("load", function() {
+    if (!equipo) {
+        document.getElementById("modalEquipo").style.display = "flex";
+    } else {
+        aplicarColor();
+    }
+});
+
+function abrirModal() {
+    document.getElementById("modalEquipo").style.display = "flex";
+}
+
+function guardarEquipo() {
+    equipo = document.getElementById("equipoSelect").value;
+    localStorage.setItem("equipoFavorito", equipo);
+    document.getElementById("modalEquipo").style.display = "none";
+    aplicarColor();
+}
+
+// ===== APLICAR COLOR =====
+function aplicarColor() {
+
+    if (!equipo) return;
+
+    const color = coloresEquipos[equipo] || "#e10600";
+    const box = document.getElementById("favoritoBox");
+    const tarjeta = document.getElementById("proximaCarrera");
+    const contador = document.getElementById("contador");
+
+    box.style.display = "block";
+
+    box.innerHTML = `
+        ⭐ Tu equipo favorito: <strong>${equipo}</strong>
+        <span onclick="abrirModal()" style="
+            display:block;
+            margin-top:6px;
+            font-size:12px;
+            opacity:0.7;
+            cursor:pointer;">
+            Cambiar equipo
+        </span>
+    `;
+
+    box.style.border = `2px solid ${color}`;
+    box.style.boxShadow = `0 0 20px ${color}`;
+    tarjeta.style.boxShadow = `0 0 30px ${color}`;
+    contador.style.boxShadow = `0 0 20px ${color}`;
+}
+
+// ===== FETCH PRÓXIMA CARRERA =====
+fetch("https://api.jolpi.ca/ergast/f1/current.json")
+.then(res => res.json())
+.then(data => {
+
+    const carreras = data.MRData.RaceTable.Races;
+    const ahora = new Date();
+
+    function crearFecha(fecha, hora) {
+        if (!fecha || !hora) return null;
+        return new Date(fecha + "T" + hora);
+    }
+
+    function convertirHora(fecha, hora) {
+        if (!fecha || !hora) return "No disponible";
+        return new Date(fecha + "T" + hora)
+            .toLocaleString("es-ES", {
+                timeZone: "Europe/Madrid",
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+    }
+
+    let proxima = null;
+
+    carreras.forEach(carrera => {
+        const fechaCarrera = crearFecha(carrera.date, carrera.time);
+        if (!proxima && fechaCarrera > ahora) {
+            proxima = carrera;
+        }
+    });
+
+    if (!proxima) {
+        document.getElementById("proximaCarrera").innerHTML =
+            "🏁 Temporada finalizada";
+        document.getElementById("contador").innerHTML = "";
+        return;
+    }
+
+    let eventos = [];
+
+if (proxima.Sprint) {
+
+    eventos = [
+        { nombre: "FP1", fecha: crearFecha(proxima.FirstPractice?.date, proxima.FirstPractice?.time) },
+
+        { nombre: "Clasificación", fecha: crearFecha(proxima.Qualifying?.date, proxima.Qualifying?.time) },
+
+        { nombre: "Sprint Shootout", fecha: crearFecha(proxima.SprintQualifying?.date, proxima.SprintQualifying?.time) },
+
+        { nombre: "Sprint", fecha: crearFecha(proxima.Sprint?.date, proxima.Sprint?.time) },
+
+        { nombre: "Carrera", fecha: crearFecha(proxima.date, proxima.time) }
+
+    ];
+
+} else {
+
+    eventos = [
+        { nombre: "FP1", fecha: crearFecha(proxima.FirstPractice?.date, proxima.FirstPractice?.time) },
+
+        { nombre: "FP2", fecha: crearFecha(proxima.SecondPractice?.date, proxima.SecondPractice?.time) },
+
+        { nombre: "FP3", fecha: crearFecha(proxima.ThirdPractice?.date, proxima.ThirdPractice?.time) },
+
+        { nombre: "Clasificación", fecha: crearFecha(proxima.Qualifying?.date, proxima.Qualifying?.time) },
+
+        { nombre: "Carrera", fecha: crearFecha(proxima.date, proxima.time) }
+
+    ];
+}
+
+eventos = eventos.filter(e => e.fecha);
+
+    const tarjeta = document.getElementById("proximaCarrera");
+    const contador = document.getElementById("contador");
+
+    tarjeta.innerHTML = `
+        <div class="gp-header">
+            <h2 class="gp-titulo">
+${proxima.raceName} ${proxima.Sprint ? "⚡ Sprint Weekend" : ""}
+</h2>
+            <p class="gp-circuito">${proxima.Circuit.circuitName}</p>
+        </div>
+
+        <div class="gp-horarios">
+            ${eventos.map(e =>
+                `<p><strong>${e.nombre}</strong> ${convertirHora(
+                    e.fecha.toISOString().split("T")[0],
+                    e.fecha.toISOString().split("T")[1]
+                )}</p>`
+            ).join("")}
+        </div>
+        
+        <div id="progresoGP" class="gp-progreso"></div>
+
+        <div id="estado" class="estado-evento"></div>
+    `;
+
+    const estado = document.getElementById("estado");
+    const progresoBox = document.getElementById("progresoGP");
+    let progresoHTML = "";
+
+eventos.forEach(ev => {
+
+const inicio = ev.fecha;
+const fin = new Date(inicio.getTime() + 2*60*60*1000);
+
+let ancho = 0;
+let clase = "";
+
+if(ahora > fin){
+ancho = 100;
+}
+
+if(ahora >= inicio && ahora <= fin){
+ancho = 100;
+clase = "en-curso";
+}
+
+progresoHTML += `
+<div class="progreso-item">
+
+<div class="progreso-nombre">${ev.nombre}</div>
+
+<div class="progreso-barra">
+<div class="progreso-fill ${clase}" style="width:${ancho}%"></div>
+</div>
+
+</div>
+`;
+
+});
+
+progresoBox.innerHTML = progresoHTML;
+
+let notificado = false;
+
+    function actualizarSistema() {
+
+        const ahora = new Date();
+        let siguiente = null;
+        let texto = "";
+
+        for (let i = 0; i < eventos.length; i++) {
+
+            const inicio = eventos[i].fecha;
+            const fin = new Date(inicio.getTime() + 2 * 60 * 60 * 1000);
+
+            if (ahora >= inicio && ahora <= fin) {
+                texto = `🔵 ${eventos[i].nombre} EN CURSO`;
+                estado.style.color = "#ff2b2b";
+                siguiente = eventos[i];
+                break;
+            }
+            
+            if (ahora < inicio) {
+                const hoy = ahora.toDateString() === inicio.toDateString();
+                if (hoy) {
+                    texto = ` 🟢${eventos[i].nombre} HOY`;
+                    estado.style.color = "#ffd000";
+                } else {
+                    texto = ` 🟡Próximo evento: ${eventos[i].nombre}`;
+                    estado.style.color = "#00ff7f";
+                }
+                siguiente = eventos[i];
+                break;
+            }
+        }
+
+        if (!texto) {
+            texto = "⚫ Fin de semana terminado";
+            estado.style.color = "#888";
+        }
+
+        estado.innerHTML = texto;
+
+        if (!siguiente) {
+            contador.innerHTML = "🏁 Evento finalizado";
+            return;
+        }
+
+        const diff = siguiente.fecha - ahora;
+        
+ // ===== AVISO 10 MINUTOS =====
+
+if(diff < 600000 && diff > 590000 && !notificado){
+
+notificado = true;
+
+enviarNotificacion(
+"🏎 Formula 1",
+siguiente.nombre + " empieza en 10 minutos"
+);
+
+}
+
+const d = Math.floor(diff / (1000*60*60*24));
+const h = Math.floor((diff/(1000*60*60)) % 24);
+const m = Math.floor((diff/(1000*60)) % 60);
+const s = Math.floor((diff/1000) % 60);
+
+// Resetear clases pero mantener "card"
+contador.className = "card mini-countdown";
+
+// Glow base del equipo (si existe)
+let glowBase = "";
+if (equipo && coloresEquipos[equipo]) {
+    glowBase = `0 0 20px ${coloresEquipos[equipo]}`;
+}
+
+// Glow dinámico adicional
+let glowExtra = "";
+
+if (d <= 3) {
+    glowExtra = ", 0 0 25px rgba(255,120,0,0.4)";
+}
+
+if (h <= 1) {
+    glowExtra = ", 0 0 35px rgba(0,255,255,0.6)";
+}
+
+// Aplicar combinación limpia
+
+
+if (diff <= 0) {
+
+if (siguiente.nombre === "Carrera") {
+
+contador.innerHTML = "🔴 CARRERA EN DIRECTO";
+
+} else {
+
+contador.innerHTML = "🟢 SESIÓN EN CURSO";
+
+}
+
+contador.classList.add("verde");
+return;
+
+}
+
+if (d > 21) contador.classList.add("rojo");
+else if (d > 14) contador.classList.add("azul");
+else if (d > 7) contador.classList.add("morado");
+else if (d > 3) contador.classList.add("amarillo");
+else if (d > 1) contador.classList.add("naranja");
+else if (d === 0 && h > 1) contador.classList.add("verde");
+else if (h <= 1) contador.classList.add("ultima-hora");
+
+contador.style.boxShadow = glowBase + glowExtra;
+
+contador.innerHTML =
+    `⏳ Hasta ${siguiente.nombre}:<br><br>${d}d ${h}h ${m}m ${s}s`;
+
+    } // ← CIERRE de actualizarSistema()
+
+    actualizarSistema();
+    setInterval(actualizarSistema, 1000);
+
+    aplicarColor();
+});
+
+function abrirTV(){
+
+if(localStorage.getItem("premium") === "true"){
+
+window.location = "tv.html";
+
+}else{
+
+if(confirm("🔒 Función Premium\n\n¿Quieres activar Premium ahora?")){
+
+window.location = "premium.html";
+
+}
+
+}
+
+}
+function abrirDirecto(){
+
+if(localStorage.getItem("premium") === "true"){
+
+window.location = "directo.html";
+
+}else{
+
+if(confirm("🔒 Función Premium\n\n¿Quieres activar Premium ahora?")){
+
+window.location = "premium.html";
+
+}
+
+}
+
+}
+</script>
+
+</body>
+</html>

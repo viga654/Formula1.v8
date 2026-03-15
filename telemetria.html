@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Telemetría F1</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+h1{
+margin-bottom:20px;
+}
+
+/* CARD */
+
+.card{
+background:#111;
+padding:25px;
+border-radius:15px;
+box-shadow:0 0 20px #00bcd4;
+margin-bottom:20px;
+}
+
+/* DATOS */
+
+.dato{
+font-size:18px;
+margin:10px 0;
+}
+
+.valor{
+color:#00e5ff;
+font-weight:bold;
+}
+
+/* SELECT */
+
+select{
+padding:10px;
+border-radius:8px;
+background:#111;
+color:white;
+border:1px solid #00bcd4;
+margin-bottom:20px;
+}
+
+/* BARRAS */
+
+.barraBox{
+background:#222;
+height:12px;
+border-radius:10px;
+margin-top:5px;
+overflow:hidden;
+}
+
+.barra{
+height:12px;
+background:#00e5ff;
+}
+
+/* BOTON */
+
+.btn{
+display:block;
+background:#00bcd4;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+canvas{
+margin-top:20px;
+background:#111;
+border-radius:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>📊 Telemetría</h1>
+
+<select id="piloto"></select>
+
+<div class="card">
+
+<div class="dato">
+Velocidad: <span class="valor" id="speed">--</span> km/h
+<div class="barraBox">
+<div class="barra" id="speedBar"></div>
+</div>
+</div>
+
+<div class="dato">
+RPM: <span class="valor" id="rpm">--</span>
+</div>
+
+<div class="dato">
+Marcha: <span class="valor" id="gear">--</span>
+</div>
+
+<div class="dato">
+Acelerador: <span class="valor" id="throttle">--</span> %
+<div class="barraBox">
+<div class="barra" id="throttleBar"></div>
+</div>
+</div>
+
+<div class="dato">
+Freno: <span class="valor" id="brake">--</span>
+</div>
+
+<div class="dato">
+DRS: <span class="valor" id="drs">--</span>
+</div>
+
+</div>
+
+<canvas id="grafico" width="350" height="150"></canvas>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+
+let sessionKey;
+let pilotoSeleccionado;
+let chart;
+
+/* detectar sesión */
+
+async function obtenerSesion(){
+
+const sesiones = await fetch(
+"https://api.openf1.org/v1/sessions?limit=1"
+).then(r=>r.json());
+
+sessionKey = sesiones[0].session_key;
+
+cargarPilotos();
+
+}
+
+/* cargar pilotos */
+
+async function cargarPilotos(){
+
+const pilotos = await fetch(
+`https://api.openf1.org/v1/drivers?session_key=${sessionKey}`
+).then(r=>r.json());
+
+const select = document.getElementById("piloto");
+
+pilotos.forEach(p=>{
+
+let option=document.createElement("option");
+
+option.value=p.driver_number;
+option.textContent=p.full_name;
+
+select.appendChild(option);
+
+});
+
+pilotoSeleccionado = pilotos[0].driver_number;
+
+select.addEventListener("change",e=>{
+pilotoSeleccionado = e.target.value;
+});
+
+}
+
+/* crear gráfico */
+
+function crearGrafico(){
+
+const ctx=document.getElementById("grafico");
+
+chart=new Chart(ctx,{
+
+type:"line",
+
+data:{
+labels:[],
+datasets:[{
+label:"Velocidad",
+data:[],
+borderColor:"#00e5ff",
+tension:0.3
+}]
+},
+
+options:{
+responsive:false,
+scales:{
+y:{
+beginAtZero:true
+}
+}
+}
+
+});
+
+}
+
+/* cargar telemetría */
+
+async function cargarDatos(){
+
+if(!sessionKey) return;
+
+const datos = await fetch(
+
+`https://api.openf1.org/v1/car_data?session_key=${sessionKey}&driver_number=${pilotoSeleccionado}&limit=1`
+
+).then(r=>r.json());
+
+if(!datos.length) return;
+
+const d=datos[0];
+
+/* actualizar datos */
+
+document.getElementById("speed").textContent=d.speed;
+document.getElementById("rpm").textContent=d.rpm;
+document.getElementById("gear").textContent=d.n_gear;
+
+document.getElementById("throttle").textContent=d.throttle;
+
+document.getElementById("brake").textContent=
+d.brake ? "ON":"OFF";
+
+document.getElementById("drs").textContent=
+d.drs ? "OPEN":"OFF";
+
+/* barras */
+
+document.getElementById("speedBar").style.width=
+(d.speed/350*100)+"%";
+
+document.getElementById("throttleBar").style.width=
+d.throttle+"%";
+
+/* grafico */
+
+chart.data.labels.push("");
+
+chart.data.datasets[0].data.push(d.speed);
+
+if(chart.data.labels.length>20){
+
+chart.data.labels.shift();
+chart.data.datasets[0].data.shift();
+
+}
+
+chart.update();
+
+}
+
+/* iniciar */
+
+obtenerSesion();
+
+crearGrafico();
+
+setInterval(cargarDatos,2000);
+
+</script>
+
+</body>
+
+</html>

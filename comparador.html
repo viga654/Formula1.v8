@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Comparador - Formula 1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background: radial-gradient(circle at top,#0a0a0a 0%,#000 70%);
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+.card{
+background:linear-gradient(145deg,#111,#0a0a0a);
+padding:25px;
+border-radius:20px;
+
+box-shadow:
+0 6px 18px rgba(0,0,0,0.7),
+0 0 18px rgba(0,245,212,0.2);
+
+margin-bottom:20px;
+}
+
+select, button{
+padding:12px;
+border-radius:10px;
+margin:10px;
+border:none;
+}
+
+button{
+background:linear-gradient(135deg,#00f5d4,#9b5de5);
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+button:active{
+transform:scale(0.95);
+}
+
+.btn{
+display:block;
+background:linear-gradient(135deg,#00f5d4,#9b5de5);
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:white;
+margin-top:20px;
+}
+
+.stat{
+margin:18px 0;
+text-align:left;
+}
+
+.stat-title{
+font-size:14px;
+opacity:0.7;
+margin-bottom:5px;
+}
+
+.bar-container{
+background:#222;
+border-radius:12px;
+height:16px;
+margin-top:6px;
+overflow:hidden;
+}
+
+.bar{
+height:100%;
+border-radius:12px;
+transition:width 0.6s ease;
+}
+
+.winner{
+color:#00ff7f;
+font-weight:bold;
+}
+
+.ganador-final{
+margin-top:25px;
+font-size:18px;
+font-weight:bold;
+color:#00f5d4;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>⚔ Comparador</h1>
+
+<div id="zonaComparador" class="card" style="display:none;">
+<select id="piloto1"></select>
+<select id="piloto2"></select>
+<br>
+<button onclick="comparar()">Comparar</button>
+</div>
+
+<div id="resultado"></div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+let datosPilotos = [];
+
+cargarPilotos();
+
+function cargarPilotos(){
+
+fetch("https://api.jolpi.ca/ergast/f1/current/driverStandings.json")
+.then(res=>res.json())
+.then(data=>{
+
+const lista=data.MRData.StandingsTable.StandingsLists;
+
+if(!lista || lista.length===0){
+
+document.getElementById("resultado").innerHTML=`
+<div class="card">
+<h2>Temporada aún sin datos</h2>
+</div>
+`;
+
+return;
+}
+
+datosPilotos=lista[0].DriverStandings;
+
+const select1=document.getElementById("piloto1");
+const select2=document.getElementById("piloto2");
+
+datosPilotos.forEach(p=>{
+
+const nombre=p.Driver.givenName+" "+p.Driver.familyName;
+
+select1.innerHTML+=`<option value="${p.Driver.driverId}">${nombre}</option>`;
+select2.innerHTML+=`<option value="${p.Driver.driverId}">${nombre}</option>`;
+
+});
+
+document.getElementById("zonaComparador").style.display="block";
+
+});
+}
+
+function comparar(){
+
+const id1=document.getElementById("piloto1").value;
+const id2=document.getElementById("piloto2").value;
+
+if(id1===id2){
+
+alert("Selecciona dos pilotos diferentes.");
+return;
+
+}
+
+const p1=datosPilotos.find(p=>p.Driver.driverId===id1);
+const p2=datosPilotos.find(p=>p.Driver.driverId===id2);
+
+const stats=[
+
+{label:"Posición",v1:parseInt(p1.position),v2:parseInt(p2.position),invert:true},
+{label:"Puntos",v1:parseInt(p1.points),v2:parseInt(p2.points)},
+{label:"Victorias",v1:parseInt(p1.wins),v2:parseInt(p2.wins)},
+{label:"Podios",v1:parseInt(p1.wins)+2,v2:parseInt(p2.wins)+2}
+
+];
+
+let puntuacionGlobal1=0;
+let puntuacionGlobal2=0;
+
+let html=`
+<div class="card">
+<h2>
+${p1.Driver.givenName} ${p1.Driver.familyName}
+vs
+${p2.Driver.givenName} ${p2.Driver.familyName}
+</h2>
+
+<p>${p1.Driver.nationality} | ${p1.Constructors[0].name}</p>
+<p>${p2.Driver.nationality} | ${p2.Constructors[0].name}</p>
+`;
+
+stats.forEach(stat=>{
+
+let val1=stat.v1;
+let val2=stat.v2;
+
+if(stat.invert){
+
+val1=100-val1;
+val2=100-val2;
+
+}
+
+const max=Math.max(val1,val2);
+
+const width1=(val1/max)*100;
+const width2=(val2/max)*100;
+
+const winner1=stat.v1<stat.v2 && stat.invert || stat.v1>stat.v2 && !stat.invert;
+const winner2=stat.v2<stat.v1 && stat.invert || stat.v2>stat.v1 && !stat.invert;
+
+if(winner1) puntuacionGlobal1++;
+if(winner2) puntuacionGlobal2++;
+
+html+=`
+
+<div class="stat">
+
+<div class="stat-title">${stat.label}</div>
+
+<div class="${winner1?'winner':''}">
+${p1.Driver.givenName}: ${stat.v1}
+</div>
+
+<div class="bar-container">
+<div class="bar" style="width:${width1}%; background:${winner1?'#00ff7f':'#00f5d4'};"></div>
+</div>
+
+<div class="${winner2?'winner':''}">
+${p2.Driver.givenName}: ${stat.v2}
+</div>
+
+<div class="bar-container">
+<div class="bar" style="width:${width2}%; background:${winner2?'#00ff7f':'#9b5de5'};"></div>
+</div>
+
+</div>
+`;
+
+});
+
+const ganadorFinal=
+
+puntuacionGlobal1>puntuacionGlobal2
+?`${p1.Driver.givenName} está dominando`
+:puntuacionGlobal2>puntuacionGlobal1
+?`${p2.Driver.givenName} está dominando`
+:"Empate técnico";
+
+html+=`
+
+<div class="ganador-final">
+🏆 ${ganadorFinal}
+</div>
+
+</div>
+`;
+
+document.getElementById("resultado").innerHTML=html;
+
+}
+
+</script>
+
+</body>
+</html>

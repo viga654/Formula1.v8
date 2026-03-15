@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Pilotos - Formula 1</title>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+/* CARD */
+
+.card{
+background:#111;
+padding:25px;
+border-radius:15px;
+margin-bottom:20px;
+box-shadow:0 0 20px #00e5ff;
+transition:0.3s;
+animation:fadeIn 0.6s ease;
+}
+
+.card.lider{
+border:2px solid gold;
+box-shadow:0 0 30px gold;
+}
+
+/* PILOTO */
+
+.piloto{
+font-size:20px;
+font-weight:bold;
+margin-bottom:5px;
+}
+
+/* EQUIPO */
+
+.equipo{
+opacity:0.8;
+margin-bottom:10px;
+}
+
+/* PUNTOS */
+
+.puntos{
+color:#00e5ff;
+font-weight:bold;
+font-size:18px;
+margin-bottom:5px;
+}
+
+/* DIFERENCIA */
+
+.diff{
+font-size:13px;
+opacity:0.7;
+margin-bottom:10px;
+}
+
+/* BARRA */
+
+.barraBox{
+background:#1b1b1b;
+height:8px;
+border-radius:6px;
+margin-top:8px;
+overflow:hidden;
+}
+
+.barra{
+height:8px;
+border-radius:6px;
+}
+
+/* ESTADISTICAS */
+
+.stats{
+display:flex;
+justify-content:space-around;
+margin-top:12px;
+font-size:14px;
+opacity:0.9;
+}
+
+/* BOTON */
+
+.btn{
+display:block;
+background:#00e5ff;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+/* ANIMACION */
+
+@keyframes fadeIn{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1> Pilotos F1</h1>
+
+<div id="contenido">
+Cargando datos...
+</div>
+
+<a href="index.html" class="btn"> Volver</a>
+
+<script>
+
+// ===============================
+// COLORES EQUIPOS
+// ===============================
+
+const coloresEquipos={
+
+"Oracle Red Bull Racing":"#1E41FF",
+"Visa Cash App Racing Bulls":"#2B4562",
+"Scuderia Ferrari":"#DC0000",
+"Mercedes-AMG Petronas":"#00D2BE",
+"McLaren":"#FF8700",
+"Aston Martin Aramco":"#006F62",
+"BWT Alpine":"#0090FF",
+"Williams":"#005AFF",
+"TGR Haas":"#B6BABD",
+"Audi":"#BB0A30",
+"Cadillac":"#00205B"
+
+};
+
+// ===============================
+// API STANDINGS
+// ===============================
+
+async function cargarStandings(){
+
+try{
+
+const res=await fetch("https://api.jolpi.ca/ergast/f1/current/driverStandings.json");
+
+const data=await res.json();
+
+return data.MRData.StandingsTable.StandingsLists[0].DriverStandings;
+
+}catch{
+
+return null;
+
+}
+
+}
+
+// ===============================
+// API RESULTADOS
+// ===============================
+
+async function cargarResultados(){
+
+try{
+
+const res=await fetch("https://api.jolpi.ca/ergast/f1/current/results.json?limit=1000");
+
+const data=await res.json();
+
+return data.MRData.RaceTable.Races;
+
+}catch{
+
+return null;
+
+}
+
+}
+
+// ===============================
+// CALCULAR STATS
+// ===============================
+
+function calcularStats(races){
+
+let stats={};
+
+races.forEach(r=>{
+
+r.Results.forEach(res=>{
+
+const id=res.Driver.driverId;
+
+if(!stats[id]) stats[id]={wins:0,podiums:0,fast:0};
+
+if(res.position=="1") stats[id].wins++;
+
+if(["1","2","3"].includes(res.position)) stats[id].podiums++;
+
+if(res.FastestLap?.rank=="1") stats[id].fast++;
+
+});
+
+});
+
+return stats;
+
+}
+
+// ===============================
+// CARGAR PILOTOS
+// ===============================
+
+async function cargarPilotos(){
+
+const standings=await cargarStandings();
+const races=await cargarResultados();
+
+if(!standings){
+
+document.getElementById("contenido").innerHTML=" La clasificacion aparecera despues de la primera carrera.";
+return;
+
+}
+
+const stats=races?calcularStats(races):{};
+
+const puntosLider=parseInt(standings[0].points);
+
+let html="";
+
+standings.forEach(p=>{
+
+const driver=p.Driver.driverId;
+
+const equipo=p.Constructors[0].name;
+
+const colorEquipo=coloresEquipos[equipo] || "#00e5ff";
+
+const puntos=parseInt(p.points);
+
+const diferencia=puntosLider-puntos;
+
+const porcentaje=(puntos/puntosLider)*100;
+
+const st=stats[driver] || {wins:0,podiums:0,fast:0};
+
+html+=`
+
+<div class="card ${p.position==1?"lider":""}"
+style="box-shadow:0 0 20px ${colorEquipo};">
+
+<div class="piloto">
+
+${p.position}. ${p.Driver.givenName} ${p.Driver.familyName}
+
+</div>
+
+<div class="equipo">
+${equipo}
+</div>
+
+<div class="puntos">
+${puntos} puntos
+</div>
+
+${p.position!=1?`<div class="diff">-${diferencia} del líder</div>`:""}
+
+<div class="barraBox">
+
+<div class="barra"
+style="width:${porcentaje}%; background:${colorEquipo};">
+</div>
+
+</div>
+
+<div class="stats">
+
+<div> ${st.wins}</div>
+
+<div> ${st.podiums}</div>
+
+<div> ${st.fast}</div>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+document.getElementById("contenido").innerHTML=html;
+
+}
+
+// iniciar
+cargarPilotos();
+
+// actualizar cada 5 minutos
+setInterval(cargarPilotos,300000);
+
+</script>
+
+</body>
+
+</html>

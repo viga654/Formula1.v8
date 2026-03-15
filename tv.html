@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<title> TV</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:#0b0b0b;
+color:white;
+font-family:Arial;
+margin:0;
+padding:15px;
+}
+
+h1{
+text-align:center;
+color:#00bcd4;
+}
+
+input,textarea{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:12px;
+background:#1c1c1c;
+color:white;
+}
+
+textarea{
+height:120px;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:12px;
+margin-top:8px;
+font-size:15px;
+width:100%;
+color:white;
+cursor:pointer;
+}
+
+.add{background:#00bcd4;}
+.play{background:#4caf50;}
+.copy{background:#ff9800;}
+.delete{background:#e53935;}
+.fav{background:#ffd400;color:black;}
+.import{background:#9c27b0;}
+.export{background:#3f51b5;}
+.convert{background:#009688;}
+
+.canal{
+display:flex;
+align-items:center;
+justify-content:space-between;
+background:#1c1c1c;
+padding:8px 10px;
+margin-top:6px;
+border-radius:10px;
+font-size:14px;
+}
+
+.nombre{
+flex:1;
+font-weight:bold;
+}
+
+.botones{
+display:flex;
+gap:5px;
+}
+
+.botones button{
+width:auto;
+padding:6px 8px;
+font-size:12px;
+}
+#contador{
+color:#00bcd4;
+font-size:14px;
+margin:10px 0;
+text-align:center;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1> TV</h1>
+
+<input id="buscar" placeholder="Buscar canal..." onkeyup="buscar()">
+
+<button onclick="togglePanel()" class="add">
+ Opciones
+</button>
+
+<div id="panelOpciones" style="display:none">
+
+<input id="nombre" placeholder="Nombre del canal">
+<input id="link" placeholder="AceStream ID o enlace">
+
+<button class="add" onclick="guardar()"> Añadir canal</button>
+
+<textarea id="listaTexto" placeholder="Pega aquí lista de canales..."></textarea>
+
+<button class="convert" onclick="convertirLista()"> Convertir lista</button>
+
+<button class="import" onclick="document.getElementById('file').click()"> Importar JSON</button>
+
+<button class="export" onclick="exportar()"> Exportar lista</button>
+
+<input type="file" id="file" accept=".json" style="display:none" onchange="importar(event)">
+
+</div>
+<div id="contador"></div>
+
+<div id="lista"></div>
+
+<script>
+
+let canales=[];
+
+/* cargar favoritos guardados */
+if(localStorage.getItem("canales")){
+canales=JSON.parse(localStorage.getItem("canales"));
+}
+
+/* cargar canales.json */
+fetch("canales.json")
+.then(res=>res.json())
+.then(data=>{
+
+if(data.hashes){
+
+data.hashes.forEach(c=>{
+
+let link="acestream://"+c.hash;
+
+let existe=canales.some(x=>x.link===link);
+
+if(!existe){
+
+canales.push({
+nombre:c.title,
+link:link,
+fav:false
+});
+
+}
+
+});
+
+guardarLocal();
+mostrar();
+
+}
+
+});
+
+/* guardar local */
+
+function guardarLocal(){
+localStorage.setItem("canales",JSON.stringify(canales));
+}
+
+/* iconos automáticos */
+
+function icono(nombre){
+
+nombre=nombre.toLowerCase();
+
+if(nombre.includes("f1")) return "";
+if(nombre.includes("dazn")) return "";
+if(nombre.includes("eurosport")) return "";
+if(nombre.includes("acb")) return "";
+
+return "";
+
+}
+
+/* mostrar canales */
+
+function mostrar(){
+
+let lista=[...canales];
+
+lista.sort((a,b)=>{
+return (b.fav===true)-(a.fav===true) || a.nombre.localeCompare(b.nombre);
+});
+
+let html="";
+
+lista.forEach((c)=>{
+
+let i=canales.indexOf(c);
+
+html+=`
+<div class="canal">
+
+<div class="nombre">
+${c.fav?" ":""} ${icono(c.nombre)} ${c.nombre}
+</div>
+
+<div class="botones">
+
+<button class="play" onclick="abrir('${c.link}')">Abrir</button>
+
+<button class="copy" onclick="copiar('${c.link}')">Copiar</button>
+
+<button class="fav" onclick="favorito(${i})"></button>
+
+<button class="delete" onclick="borrar(${i})">X</button>
+
+</div>
+
+</div>
+`;
+
+});
+
+document.getElementById("lista").innerHTML=html;
+
+/* contador de canales */
+
+let contador=document.getElementById("contador");
+
+if(contador){
+contador.innerText=" Canales: "+canales.length;
+}
+
+}
+
+/* abrir canal */
+
+function abrir(link){
+
+if(!link.startsWith("acestream://") && link.length===40){
+link="acestream://"+link;
+}
+
+/* intento normal */
+
+window.location.href=link;
+
+/* intento AceStream directo */
+
+setTimeout(()=>{
+
+let intent="intent://"+link.replace("acestream://","")+
+"#Intent;scheme=acestream;package=org.acestream.media;end";
+
+window.location.href=intent;
+
+},500);
+
+}
+
+/* copiar */
+
+function copiar(link){
+
+navigator.clipboard.writeText(link);
+alert("Enlace copiado");
+
+}
+
+/* favorito */
+
+function favorito(i){
+
+canales[i].fav=!canales[i].fav;
+
+guardarLocal();
+mostrar();
+
+}
+
+/* borrar */
+
+function borrar(i){
+
+if(!confirm("Eliminar canal?")) return;
+
+canales.splice(i,1);
+
+guardarLocal();
+mostrar();
+
+}
+
+/* buscar */
+
+function buscar(){
+
+let texto=document.getElementById("buscar").value.toLowerCase();
+
+let cards=document.querySelectorAll(".canal");
+
+cards.forEach(c=>{
+
+let nombre=c.innerText.toLowerCase();
+
+c.style.display=nombre.includes(texto)?"flex":"none";
+
+});
+
+}
+
+/* añadir canal */
+
+function guardar(){
+
+let nombre=document.getElementById("nombre").value.trim();
+let link=document.getElementById("link").value.trim();
+
+if(nombre==""||link==""){
+alert("Completa los campos");
+return;
+}
+
+canales.push({
+nombre:nombre,
+link:link,
+fav:false
+});
+
+guardarLocal();
+
+document.getElementById("nombre").value="";
+document.getElementById("link").value="";
+
+mostrar();
+
+}
+
+/* convertir lista */
+
+function convertirLista(){
+
+let texto=document.getElementById("listaTexto").value.trim();
+
+if(texto==""){
+alert("Pega una lista primero");
+return;
+}
+
+let lineas=texto.split("\n");
+
+for(let i=0;i<lineas.length;i+=2){
+
+let nombre=lineas[i];
+let link=lineas[i+1];
+
+if(nombre && link){
+
+canales.push({
+nombre:nombre.trim(),
+link:link.trim(),
+fav:false
+});
+
+}
+
+}
+
+guardarLocal();
+
+document.getElementById("listaTexto").value="";
+
+mostrar();
+
+alert("Canales añadidos");
+
+}
+
+/* limpiar duplicados */
+
+function limpiarDuplicados(){
+
+let vistos={};
+
+canales=canales.filter(c=>{
+
+if(vistos[c.link]){
+return false;
+}
+
+vistos[c.link]=true;
+return true;
+
+});
+
+guardarLocal();
+mostrar();
+
+alert("Duplicados eliminados");
+
+}
+
+/* importar json */
+
+function importar(event){
+
+let file=event.target.files[0];
+
+if(!file) return;
+
+let reader=new FileReader();
+
+reader.onload=function(e){
+
+try{
+
+let data=JSON.parse(e.target.result);
+
+canales=data;
+
+guardarLocal();
+mostrar();
+
+alert("Canales importados");
+
+}catch{
+
+alert("Archivo JSON inválido");
+
+}
+
+};
+
+reader.readAsText(file);
+
+}
+
+/* exportar */
+
+function exportar(){
+
+let dataStr=JSON.stringify(canales,null,2);
+
+let blob=new Blob([dataStr],{type:"application/json"});
+
+let url=URL.createObjectURL(blob);
+
+let a=document.createElement("a");
+
+a.href=url;
+a.download="canales.json";
+
+a.click();
+
+}
+
+mostrar();
+
+</script>
+
+</body>
+</html>

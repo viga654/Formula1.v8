@@ -1,0 +1,368 @@
+<!DOCTYPE html><html><head><title>Análisis F1</title><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="css/style.css"><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+.card{
+background:#111;
+padding:25px;
+border-radius:15px;
+box-shadow:0 0 20px #00bcd4;
+margin-bottom:20px;
+}
+
+.btn{
+display:block;
+background:#00bcd4;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+.podio{
+display:flex;
+justify-content:space-around;
+align-items:flex-end;
+margin-top:20px;
+}
+
+.podio div{
+flex:1;
+padding:10px;
+}
+
+.p1{
+font-size:22px;
+font-weight:bold;
+color:#ffd700;
+}
+
+.p2{
+color:#c0c0c0;
+}
+
+.p3{
+color:#cd7f32;
+}
+
+.info{
+margin-top:10px;
+opacity:0.85;
+}
+
+canvas{
+background:#111;
+border-radius:12px;
+padding:10px;
+}
+
+</style></head><body><h1>🎙 Análisis del Gran Premio</h1><div id="contenido">
+Cargando análisis...
+</div><a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+fetch("https://api.jolpi.ca/ergast/f1/current/last/results.json")
+
+.then(res=>res.json())
+
+.then(data=>{
+
+const race = data.MRData.RaceTable.Races[0];
+const resultados = race.Results;
+
+const ganador = resultados[0];
+const segundo = resultados[1];
+const tercero = resultados[2];
+
+/* CALCULOS */
+
+let sorpresa = resultados[0];
+let maxGanadas = -999;
+
+let desastre = resultados[0];
+let maxPerdidas = -999;
+
+let consistente = resultados[0];
+let menorCambio = 999;
+
+resultados.forEach(r=>{
+
+const cambio = r.grid - r.position;
+
+if(cambio > maxGanadas){
+
+maxGanadas = cambio;
+sorpresa = r;
+
+}
+
+if(-cambio > maxPerdidas){
+
+maxPerdidas = -cambio;
+desastre = r;
+
+}
+
+if(Math.abs(cambio) < menorCambio){
+
+menorCambio = Math.abs(cambio);
+consistente = r;
+
+}
+
+});
+
+/* vuelta rapida */
+
+let vueltaRapida = resultados.find(r=>r.FastestLap);
+
+/* adelantamientos */
+
+let adelantamientos = 0;
+
+resultados.slice(0,10).forEach(r=>{
+adelantamientos += (r.grid - r.position);
+});
+
+/* piloto del dia */
+
+let pilotoDia = sorpresa;
+
+/* mejor equipo */
+
+let equipos = {};
+
+resultados.forEach(r=>{
+
+const equipo = r.Constructor.name;
+
+if(!equipos[equipo]) equipos[equipo] = 0;
+
+equipos[equipo] += parseInt(r.points);
+
+});
+
+let mejorEquipo = Object.keys(equipos).reduce((a,b)=>
+equipos[a] > equipos[b] ? a : b
+);
+
+/* abandonos */
+
+let abandonos = resultados.filter(r=>
+r.status !== "Finished" && !r.status.includes("Lap")
+);
+
+/* html */
+
+let html = `
+
+<div class="card">
+
+<h2>${race.raceName}</h2>
+
+<div class="podio">
+
+<div class="p2">
+🥈<br>${segundo.Driver.familyName}
+</div>
+
+<div class="p1">
+🥇<br>${ganador.Driver.familyName}
+</div>
+
+<div class="p3">
+🥉<br>${tercero.Driver.familyName}
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>📈 Mayor remontada</h3>
+
+<p>${sorpresa.Driver.givenName} ${sorpresa.Driver.familyName}</p>
+
+<p class="info">
++${sorpresa.grid - sorpresa.position} posiciones
+</p>
+
+</div>
+
+<div class="card">
+
+<h3>📉 Carrera difícil</h3>
+
+<p>${desastre.Driver.givenName} ${desastre.Driver.familyName}</p>
+
+<p class="info">
+-${desastre.position - desastre.grid} posiciones
+</p>
+
+</div>
+
+`;
+
+if(vueltaRapida){
+
+html += `
+
+<div class="card">
+
+<h3>⚡ Vuelta rápida</h3>
+
+<p>${vueltaRapida.Driver.familyName}</p>
+
+<p class="info">
+${vueltaRapida.FastestLap.Time.time}
+</p>
+
+</div>
+
+`;
+
+}
+
+html += `
+
+<div class="card">
+
+<h3>⭐ Piloto del día</h3>
+
+<p>${pilotoDia.Driver.givenName} ${pilotoDia.Driver.familyName}</p>
+
+<p class="info">
+Gran progresión durante la carrera.
+</p>
+
+</div>
+
+<div class="card">
+
+<h3>🏎 Equipo dominante</h3>
+
+<p>${mejorEquipo}</p>
+
+</div>
+
+<div class="card">
+
+<h3>⚠ Abandonos</h3>
+
+<p class="info">
+
+${abandonos.length === 0 ?
+"No hubo abandonos"
+:
+abandonos.map(a=>a.Driver.familyName).join(", ")}
+
+</p>
+
+</div>
+
+<div class="card">
+
+<h3>📊 Estadísticas</h3>
+
+<p class="info">
+Adelantamientos estimados top10:
+<strong>${adelantamientos}</strong>
+</p>
+
+<p class="info">
+Victoria desde la posición
+<strong>${ganador.grid}</strong>
+</p>
+
+</div>
+
+<div class="card">
+
+<h3>📊 Resultados Top10</h3>
+
+<canvas id="grafico"></canvas>
+
+</div>
+
+<div class="card">
+
+<h3>🎤 Análisis del GP</h3>
+
+<p class="info">
+
+${ganador.Driver.familyName} logró una victoria sólida tras gestionar
+correctamente el ritmo de carrera y las estrategias de neumáticos.
+La carrera mostró una diferencia clara entre los equipos punteros
+y el grupo medio, mientras que ${sorpresa.Driver.familyName}
+protagonizó la remontada más destacada del Gran Premio.
+
+</p>
+
+</div>
+
+`;
+
+document.getElementById("contenido").innerHTML = html;
+
+/* GRAFICO */
+
+const top10 = resultados.slice(0,10);
+
+const nombres = top10.map(r=>r.Driver.familyName);
+
+const posiciones = top10.map(r=>r.position);
+
+const ctx = document.getElementById("grafico");
+
+new Chart(ctx,{
+
+type:"bar",
+
+data:{
+
+labels:nombres,
+
+datasets:[{
+
+label:"Posición final",
+
+data:posiciones
+
+}]
+
+},
+
+options:{
+plugins:{legend:{display:false}},
+scales:{
+y:{
+reverse:true,
+ticks:{stepSize:1}
+}
+}
+}
+
+});
+
+})
+
+.catch(()=>{
+
+document.getElementById("contenido").innerHTML=
+"<div class='card'>No se pudo cargar el análisis.</div>";
+
+});
+
+</script></body>
+</html>

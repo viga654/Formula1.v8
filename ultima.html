@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Última Sesión - Formula 1</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+.gold{
+color:#FFD700;
+}
+
+.silver{
+color:#C0C0C0;
+}
+
+.bronze{
+color:#CD7F32;
+}
+
+.card{
+background:#111;
+padding:25px;
+border-radius:15px;
+box-shadow:0 0 20px #00e5ff;
+margin-bottom:25px;
+}
+
+.sesion{
+color:#00e5ff;
+font-size:24px;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.circuito{
+opacity:0.7;
+margin-bottom:15px;
+}
+
+.resultado{
+display:flex;
+justify-content:space-between;
+padding:8px 0;
+border-bottom:1px solid rgba(255,255,255,0.08);
+font-size:15px;
+}
+
+.pos{
+width:35px;
+font-weight:bold;
+}
+
+.gold{color:#FFD700;}
+.silver{color:#C0C0C0;}
+.bronze{color:#CD7F32;}
+
+.piloto{
+flex:1;
+text-align:left;
+margin-left:10px;
+}
+
+.equipo{
+opacity:0.5;
+font-size:12px;
+}
+
+.tiempo{
+opacity:0.8;
+}
+
+.btn{
+display:block;
+background:#00e5ff;
+padding:14px;
+border-radius:12px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+font-size:16px;
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+<h1>🏁 Última Sesión</h1>
+
+<div id="contenido">
+Cargando fin de semana...
+</div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+function convertirTiempo(t){
+
+if(!t) return 0;
+
+const partes = t.split(":");
+
+return parseFloat(partes[0])*60 + parseFloat(partes[1]);
+
+}
+
+async function cargarFinDeSemana(){
+
+const contenedor = document.getElementById("contenido");
+
+contenedor.innerHTML="Cargando resultados...";
+
+let html="";
+
+try{
+
+// =====================
+// PRACTICES (OPENF1)
+// =====================
+
+const sesionesRes = await fetch("https://api.openf1.org/v1/sessions?limit=60");
+let sesiones = await sesionesRes.json();
+
+if(sesiones && sesiones.length){
+
+// ordenar por fecha
+sesiones.sort((a,b)=> new Date(b.date_start)-new Date(a.date_start));
+
+const meeting = sesiones[0].meeting_key;
+
+const sesionesGP = sesiones
+.filter(s => s.meeting_key === meeting)
+.sort((a,b)=> new Date(a.date_start)-new Date(b.date_start));
+
+for(const sesion of sesionesGP){
+
+const nombre = sesion.session_name.toLowerCase();
+
+if(!nombre.includes("practice") && !nombre.includes("fp")) continue;
+
+try{
+
+const lapsRes = await fetch(`https://api.openf1.org/v1/laps?session_key=${sesion.session_key}`);
+const laps = await lapsRes.json();
+
+if(!laps.length) continue;
+
+const driversRes = await fetch(`https://api.openf1.org/v1/drivers?session_key=${sesion.session_key}`);
+const drivers = await driversRes.json();
+
+if(!drivers.length) continue;
+
+// mejores vueltas
+let mejores={};
+
+laps.forEach(l=>{
+
+if(!l.lap_time) return;
+
+if(!mejores[l.driver_number] || l.lap_time < mejores[l.driver_number].lap_time){
+
+mejores[l.driver_number]=l;
+
+}
+
+});
+
+// crear clasificación
+let clasificacion = drivers.map(d=>{
+
+const mejor = mejores[d.driver_number];
+
+return {
+
+nombre:d.full_name,
+equipo:d.team_name,
+tiempo:mejor ? mejor.lap_time : null
+
+};
+
+});
+
+// ordenar
+clasificacion.sort((a,b)=>{
+
+if(!a.tiempo) return 1;
+if(!b.tiempo) return -1;
+
+return a.tiempo-b.tiempo;
+
+});
+
+const leader = clasificacion[0]?.tiempo;
+
+html+=`
+
+<div class="card">
+
+<div class="sesion">
+${sesion.session_name}
+</div>
+
+<div class="circuito">
+${sesion.circuit_short_name} - ${sesion.location}
+</div>
+
+`;
+
+clasificacion.forEach((r,i)=>{
+
+let gap="No time";
+
+if(r.tiempo){
+
+gap = i===0
+? r.tiempo.toFixed(3)+"s"
+: "+"+(r.tiempo-leader).toFixed(3)+"s";
+
+}
+
+html+=`
+
+<div class="resultado">
+
+<div class="pos">${i+1}</div>
+
+<div class="piloto">
+
+${r.nombre}
+
+<div class="equipo">${r.equipo}</div>
+
+</div>
+
+<div class="tiempo">${gap}</div>
+
+</div>
+
+`;
+
+});
+
+html+="</div>";
+
+}catch{}
+
+}
+
+}
+
+// =====================
+// QUALIFYING
+// =====================
+
+try{
+
+const resQ = await fetch("https://api.jolpi.ca/ergast/f1/current/last/qualifying.json");
+
+const dataQ = await resQ.json();
+
+const carrera = dataQ.MRData.RaceTable.Races[0];
+
+if(carrera){
+
+const qualy = carrera.QualifyingResults;
+
+html += `
+
+<h2 style="color:#00e5ff;margin-bottom:20px;">
+${carrera.raceName}
+</h2>
+
+`;
+
+if(qualy){
+
+qualy.sort((a,b)=>a.position-b.position);
+
+html+=`
+
+<div class="card">
+
+<div class="sesion">
+Qualifying
+</div>
+
+`;
+
+qualy.forEach((r)=>{
+
+const piloto = r.Driver.familyName;
+const equipo = r.Constructor.name;
+
+let tiempo = r.Q3 || r.Q2 || r.Q1;
+
+if(!tiempo){
+tiempo = "No time";
+}
+
+html+=`
+
+<div class="resultado">
+
+<div class="pos ${r.position==1?'gold':r.position==2?'silver':r.position==3?'bronze':''}">
+${r.position}
+</div>
+
+<div class="piloto">
+
+${piloto}
+
+<div class="equipo">${equipo}</div>
+
+</div>
+
+<div class="tiempo">${tiempo}</div>
+
+</div>
+
+`;
+
+});
+
+html+="</div>";
+
+}
+
+}
+
+}catch{}
+
+// =====================
+// RACE
+// =====================
+
+try{
+
+const resR = await fetch("https://api.jolpi.ca/ergast/f1/current/last/results.json");
+
+const dataR = await resR.json();
+
+const raceData = dataR.MRData.RaceTable.Races[0];
+
+if(raceData){
+
+const race = raceData.Results;
+
+html+=`
+
+<div class="card">
+
+<div class="sesion">
+Race
+</div>
+
+`;
+
+race.forEach((r)=>{
+
+const piloto = r.Driver.familyName;
+const equipo = r.Constructor.name;
+
+const tiempo = r.Time ? r.Time.time : r.status;
+
+html+=`
+
+<div class="resultado">
+
+<div class="pos ${r.position==1?'gold':r.position==2?'silver':r.position==3?'bronze':''}">
+${r.position}
+</div>
+
+<div class="piloto">
+
+${piloto}
+
+<div class="equipo">${equipo}</div>
+
+</div>
+
+<div class="tiempo">${tiempo}</div>
+
+</div>
+
+`;
+
+});
+
+html+="</div>";
+
+}
+
+}catch{}
+
+if(!html){
+
+contenedor.innerHTML="Resultados aún no disponibles.";
+return;
+
+}
+
+contenedor.innerHTML=html;
+
+}catch(e){
+
+contenedor.innerHTML="Error cargando datos.";
+console.error(e);
+
+}
+
+}
+
+cargarFinDeSemana();
+
+setInterval(cargarFinDeSemana,60000);
+
+</script>
+
+</body>
+
+</html>

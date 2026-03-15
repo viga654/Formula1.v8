@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Onboards F1</title>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:#0b0b0b;
+font-family:Arial;
+color:white;
+margin:0;
+text-align:center;
+}
+
+/* HEADER */
+
+h1{
+background:#00e5ff;
+color:black;
+margin:0;
+padding:15px;
+}
+
+/* VIDEO */
+
+video{
+width:100%;
+max-width:900px;
+margin-top:10px;
+border-radius:12px;
+box-shadow:0 0 20px #00e5ff;
+}
+
+/* GRID */
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:10px;
+padding:10px;
+max-width:1000px;
+margin:auto;
+}
+
+/* CARD PILOTO */
+
+.piloto{
+background:#1a1a1a;
+border-radius:12px;
+padding:10px;
+cursor:pointer;
+display:flex;
+align-items:center;
+gap:10px;
+transition:.25s;
+font-size:14px;
+}
+
+.piloto img{
+width:40px;
+}
+
+.piloto:hover{
+background:#00e5ff;
+color:black;
+transform:scale(1.05);
+}
+
+/* BOTON */
+
+.btn{
+display:inline-block;
+margin:25px;
+padding:12px 20px;
+background:#00e5ff;
+color:black;
+text-decoration:none;
+border-radius:10px;
+font-weight:bold;
+}
+
+/* STATUS */
+
+.status{
+margin-top:10px;
+opacity:.7;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1> Onboards F1</h1>
+
+<video id="video" controls autoplay></video>
+
+<div id="estado" class="status">
+Selecciona piloto
+</div>
+
+<div class="grid" id="grid"></div>
+
+<a href="index.html" class="btn"> Volver</a>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<script>
+
+/* ===== PARRILLA F1 2026 ===== */
+
+const pilotos = [
+
+{name:"Max Verstappen",team:"red-bull",stream:"LINK_VERSTAPPEN"},
+{name:"Isack Hadjar",team:"red-bull",stream:"LINK_HADJAR"},
+
+{name:"Lewis Hamilton",team:"ferrari",stream:"LINK_HAMILTON"},
+{name:"Charles Leclerc",team:"ferrari",stream:"LINK_LECLERC"},
+
+{name:"George Russell",team:"mercedes",stream:"LINK_RUSSELL"},
+{name:"Kimi Antonelli",team:"mercedes",stream:"LINK_ANTONELLI"},
+
+{name:"Lando Norris",team:"mclaren",stream:"LINK_NORRIS"},
+{name:"Oscar Piastri",team:"mclaren",stream:"LINK_PIASTRI"},
+
+{name:"Fernando Alonso",team:"aston-martin",stream:"LINK_ALONSO"},
+{name:"Lance Stroll",team:"aston-martin",stream:"LINK_STROLL"},
+
+{name:"Pierre Gasly",team:"alpine",stream:"LINK_GASLY"},
+{name:"Franco Colapinto",team:"alpine",stream:"LINK_COLAPINTO"},
+
+{name:"Carlos Sainz",team:"williams",stream:"LINK_SAINZ"},
+{name:"Alex Albon",team:"williams",stream:"LINK_ALBON"},
+
+{name:"Liam Lawson",team:"rb",stream:"LINK_LAWSON"},
+{name:"Arvid Lindblad",team:"rb",stream:"LINK_LINDBLAD"},
+
+{name:"Esteban Ocon",team:"haas",stream:"LINK_OCON"},
+{name:"Oliver Bearman",team:"haas",stream:"LINK_BEARMAN"},
+
+{name:"Nico Hulkenberg",team:"kick-sauber",stream:"LINK_HULKENBERG"},
+{name:"Gabriel Bortoleto",team:"kick-sauber",stream:"LINK_BORTOLETO"},
+
+{name:"Sergio Perez",team:"cadillac",stream:"LINK_PEREZ"},
+{name:"Valtteri Bottas",team:"cadillac",stream:"LINK_BOTTAS"}
+
+];
+
+
+/* ===== GENERAR GRID AUTOMATICO ===== */
+
+const grid = document.getElementById("grid");
+
+pilotos.forEach(p=>{
+
+grid.innerHTML += `
+
+<div class="piloto" onclick="ver('${p.stream}')">
+
+<img src="https://media.formula1.com/content/dam/fom-website/teams/2024/${p.team}.png">
+
+${p.name}
+
+</div>
+
+`;
+
+});
+
+
+/* ===== REPRODUCTOR VIDEO ===== */
+
+let hls;
+
+function ver(url){
+
+const video = document.getElementById("video");
+
+document.getElementById("estado").innerText = "Cargando onboard...";
+
+if(hls){
+hls.destroy();
+}
+
+if(Hls.isSupported()){
+
+hls = new Hls();
+hls.loadSource(url);
+hls.attachMedia(video);
+
+}else{
+
+video.src = url;
+
+}
+
+}
+
+</script>
+
+</body>
+
+</html>

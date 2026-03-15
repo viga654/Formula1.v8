@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Live Timing</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+padding:20px;
+text-align:center;
+}
+
+/* TABLA */
+
+.tabla{
+background:#111;
+border-radius:15px;
+box-shadow:0 0 20px #00bcd4;
+overflow:hidden;
+}
+
+.fila{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px;
+border-bottom:1px solid rgba(255,255,255,0.08);
+transition:0.4s;
+}
+
+.fila.cambio{
+background:#00343b;
+}
+
+.pos{
+width:30px;
+font-weight:bold;
+color:#00e5ff;
+}
+
+.piloto{
+flex:1;
+text-align:left;
+margin-left:10px;
+}
+
+.equipo{
+font-size:11px;
+opacity:0.6;
+}
+
+.gap{
+width:70px;
+font-size:13px;
+opacity:0.8;
+}
+
+.neumatico{
+width:20px;
+height:20px;
+border-radius:50%;
+margin-left:5px;
+}
+
+/* COLORES NEUMATICO */
+
+.soft{background:#ff2e2e;}
+.medium{background:#ffd400;}
+.hard{background:#ffffff;}
+
+/* BOTON */
+
+.btn{
+display:block;
+background:#00bcd4;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>📡 Live Timing</h1>
+
+<div id="tabla" class="tabla">
+Cargando Live Timing...
+</div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+/* COLORES EQUIPO */
+
+const coloresEquipos={
+
+"Red Bull":"#1E41FF",
+"Ferrari":"#DC0000",
+"Mercedes":"#00D2BE",
+"McLaren":"#FF8700",
+"Aston Martin":"#006F62",
+"Alpine":"#0090FF",
+"Williams":"#005AFF",
+"Haas":"#B6BABD",
+"Sauber":"#52E252",
+"RB":"#2B4562"
+
+};
+
+/* guardar posiciones previas */
+
+let posicionesPrevias={};
+
+async function cargar(){
+
+try{
+
+const drivers=await fetch(
+"https://api.openf1.org/v1/drivers?session_key=latest"
+).then(r=>r.json());
+
+const posiciones=await fetch(
+"https://api.openf1.org/v1/position?session_key=latest"
+).then(r=>r.json());
+
+if(!posiciones.length){
+
+document.getElementById("tabla").innerHTML=
+"<div class='fila'>No hay sesión activa</div>";
+
+return;
+
+}
+
+/* ultima posicion por piloto */
+
+let ultima={};
+
+posiciones.forEach(p=>{
+ultima[p.driver_number]=p;
+});
+
+let lista=Object.values(ultima);
+
+/* ordenar */
+
+lista.sort((a,b)=>a.position-b.position);
+
+let html="";
+
+lista.forEach(p=>{
+
+let driver=drivers.find(
+d=>d.driver_number==p.driver_number
+);
+
+let nombre=driver?.full_name || "Driver";
+
+let equipo=driver?.team_name || "";
+
+let color=coloresEquipos[equipo] || "#00e5ff";
+
+/* detectar adelantamientos */
+
+let clase="fila";
+
+if(posicionesPrevias[p.driver_number] &&
+posicionesPrevias[p.driver_number] != p.position){
+
+clase="fila cambio";
+
+}
+
+/* gap */
+
+let gap=p.gap_to_leader || "";
+
+/* neumáticos demo */
+
+let neum="soft";
+
+html+=`
+
+<div class="${clase}">
+
+<div class="pos">
+${p.position}
+</div>
+
+<div class="piloto">
+
+<span style="color:${color}">
+${nombre}
+</span>
+
+<div class="equipo">
+${equipo}
+</div>
+
+</div>
+
+<div class="gap">
+${gap}
+</div>
+
+<div class="neumatico ${neum}"></div>
+
+</div>
+
+`;
+
+/* guardar posicion */
+
+posicionesPrevias[p.driver_number]=p.position;
+
+});
+
+document.getElementById("tabla").innerHTML=html;
+
+}
+
+catch{
+
+document.getElementById("tabla").innerHTML=
+"<div class='fila'>Error cargando timing</div>";
+
+}
+
+}
+
+/* actualizar cada 2 segundos */
+
+cargar();
+
+setInterval(cargar,2000);
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Clasificación - Formula 1</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+
+/* ===== BASE ===== */
+
+body{
+background: radial-gradient(circle at top,#0a0a0a 0%,#000 70%);
+color:white;
+font-family:Arial;
+padding:20px;
+}
+
+h1{
+text-align:center;
+margin-bottom:25px;
+}
+
+/* ===== BOTON VOLVER ===== */
+
+.btn{
+display:block;
+text-align:center;
+padding:16px;
+margin-top:30px;
+
+color:white;
+font-size:18px;
+font-weight:bold;
+text-decoration:none;
+
+border-radius:20px;
+
+background:linear-gradient(135deg,#00f5d4,#9b5de5);
+
+box-shadow:0 0 25px rgba(0,245,212,0.5);
+
+transition:0.25s;
+}
+
+.btn:active{
+transform:scale(0.96);
+}
+
+/* ===== PODIUM ===== */
+
+.podium{
+display:grid;
+grid-template-columns:1fr 1fr 1fr;
+gap:10px;
+margin-bottom:25px;
+}
+
+.podium-card{
+background:#111;
+padding:15px;
+border-radius:12px;
+text-align:center;
+font-weight:bold;
+}
+
+.podium-1{
+border:3px solid gold;
+box-shadow:0 0 25px gold;
+}
+
+.podium-2{
+border:3px solid silver;
+}
+
+.podium-3{
+border:3px solid #cd7f32;
+}
+
+/* ===== TARJETAS ===== */
+
+.card{
+background:linear-gradient(145deg,#111,#0a0a0a);
+padding:20px;
+border-radius:15px;
+margin-bottom:18px;
+
+box-shadow:
+0 6px 18px rgba(0,0,0,0.7),
+0 0 18px rgba(0,245,212,0.2);
+
+opacity:0;
+transform:translateY(15px);
+animation:fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn{
+to{
+opacity:1;
+transform:translateY(0);
+}
+}
+
+/* LIDER */
+
+.card.lider{
+border:3px solid gold;
+box-shadow:0 0 40px gold;
+}
+
+/* ESPAÑOL */
+
+.card.espanol{
+border:2px solid red;
+box-shadow:0 0 25px red;
+}
+
+/* FAVORITO */
+
+.card.favorito{
+border:2px solid #00f5d4;
+box-shadow:0 0 30px #00f5d4;
+}
+
+/* TEXTO */
+
+.equipo{
+opacity:0.8;
+margin-bottom:6px;
+}
+
+.puntos{
+font-weight:bold;
+font-size:18px;
+}
+
+.diferencia{
+font-size:14px;
+opacity:0.7;
+}
+
+/* ===== BARRA ===== */
+
+.barra-container{
+background:#222;
+height:8px;
+border-radius:10px;
+margin-top:10px;
+overflow:hidden;
+}
+
+.barra{
+height:100%;
+border-radius:10px;
+transition:width 0.5s;
+}
+
+/* ===== COMPARADOR ===== */
+
+.comparador-box{
+background:linear-gradient(145deg,#111,#0a0a0a);
+padding:20px;
+border-radius:15px;
+margin-bottom:25px;
+
+border:1px solid rgba(0,245,212,0.3);
+
+box-shadow:
+0 0 20px rgba(0,245,212,0.45),
+inset 0 0 10px rgba(0,245,212,0.1);
+}
+
+select{
+padding:10px;
+border-radius:8px;
+margin:5px;
+
+background:#0b0b0b;
+color:white;
+
+border:1px solid rgba(0,245,212,0.35);
+}
+
+.bandera{
+margin-right:6px;
+font-size:18px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>🏆 Clasificación Pilotos</h1>
+
+<div id="pilotoFavorito"></div>
+
+<div id="podium"></div>
+
+<div id="comparador" class="comparador-box"></div>
+
+<div id="contenido"></div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+/* ===== COLORES EQUIPO ===== */
+
+const coloresEquipos={
+"Oracle Red Bull Racing":"#1E41FF",
+"Visa Cash App Racing Bulls":"#2B4562",
+"Scuderia Ferrari":"#DC0000",
+"Mercedes-AMG Petronas":"#00D2BE",
+"McLaren":"#FF8700",
+"Aston Martin Aramco":"#006F62",
+"BWT Alpine":"#0090FF",
+"Williams":"#005AFF",
+"TGR Haas":"#B6BABD",
+"Audi":"#BB0A30",
+"Cadillac":"#00205B"
+};
+
+/* ===== BANDERAS ===== */
+
+const banderas={
+Spanish:"🇪🇸",
+British:"🇬🇧",
+Dutch:"🇳🇱",
+Australian:"🇦🇺",
+French:"🇫🇷",
+German:"🇩🇪",
+Canadian:"🇨🇦",
+Japanese:"🇯🇵",
+Thai:"🇹🇭",
+Mexican:"🇲🇽",
+American:"🇺🇸",
+Chinese:"🇨🇳",
+Monégasque:"🇲🇨"
+};
+
+const year=new Date().getFullYear();
+
+function cargarClasificacion(año){
+
+fetch(`https://api.jolpi.ca/ergast/f1/${año}/driverStandings.json`)
+.then(res=>res.json())
+.then(data=>{
+
+const lista=data?.MRData?.StandingsTable?.StandingsLists;
+
+if(!lista||lista.length===0){
+
+if(año>2020){
+cargarClasificacion(año-1);
+}else{
+document.getElementById("contenido").innerHTML="Clasificación no disponible";
+}
+
+return;
+}
+
+const pilotos=lista[0].DriverStandings;
+const puntosLider=parseInt(pilotos[0].points);
+
+/* ===== PODIUM ===== */
+
+document.getElementById("podium").innerHTML=`
+
+<div class="podium">
+
+<div class="podium-card podium-2">
+🥈 ${pilotos[1].Driver.familyName}
+</div>
+
+<div class="podium-card podium-1">
+🥇 ${pilotos[0].Driver.familyName}
+</div>
+
+<div class="podium-card podium-3">
+🥉 ${pilotos[2].Driver.familyName}
+</div>
+
+</div>
+
+`;
+
+let html="";
+let options="";
+
+pilotos.forEach((p,index)=>{
+
+const equipo=p.Constructors[0].name;
+const colorEquipo=coloresEquipos[equipo]||"#00f5d4";
+
+const puntos=parseInt(p.points);
+const diferencia=puntosLider-puntos;
+const porcentaje=(puntos/puntosLider)*100;
+
+const esLider=p.position==1;
+const esEspanol=p.Driver.nationality==="Spanish";
+
+const bandera=banderas[p.Driver.nationality]||"";
+
+options+=`
+<option value="${index}">
+${p.Driver.givenName} ${p.Driver.familyName}
+</option>
+`;
+
+html+=`
+
+<div class="card ${esLider?"lider":""} ${esEspanol?"espanol":""}"
+style="animation-delay:${index*0.05}s">
+
+<h3>
+
+<span class="bandera">${bandera}</span>
+
+${esLider?"👑 ":""}
+
+${p.position}. 
+${p.Driver.givenName} ${p.Driver.familyName}
+
+</h3>
+
+<div class="equipo">${equipo}</div>
+
+<div class="puntos">${puntos} puntos</div>
+
+${!esLider?`<div class="diferencia">
+A ${diferencia} pts del líder
+</div>`:""}
+
+<div class="barra-container">
+<div class="barra"
+style="width:${porcentaje}%;background:${colorEquipo}">
+</div>
+</div>
+
+</div>
+
+`;
+
+});
+
+/* ===== MOSTRAR ===== */
+
+document.getElementById("contenido").innerHTML=html;
+
+/* ===== COMPARADOR ===== */
+
+document.getElementById("comparador").innerHTML=`
+
+<h3>⚔ Comparar pilotos</h3>
+
+<select id="p1">${options}</select>
+<select id="p2">${options}</select>
+
+<div id="resultadoComparacion" style="margin-top:15px;"></div>
+
+`;
+
+/* ===== PILOTO FAVORITO ===== */
+
+document.getElementById("comparador").innerHTML+=`
+<br>
+<button onclick="guardarFavorito()">⭐ Guardar piloto favorito</button>
+`;
+
+function guardarFavorito(){
+
+const index=document.getElementById("p1").value;
+
+localStorage.setItem("pilotoFavorito",index);
+
+mostrarFavorito();
+
+}
+
+function mostrarFavorito(){
+
+const fav=localStorage.getItem("pilotoFavorito");
+
+if(fav===null) return;
+
+const p=pilotos[fav];
+
+document.getElementById("pilotoFavorito").innerHTML=`
+
+<div class="card favorito">
+
+⭐ Tu piloto favorito
+
+<h3>${p.Driver.givenName} ${p.Driver.familyName}</h3>
+
+<div>${p.Constructors[0].name}</div>
+
+<div class="puntos">${p.points} puntos</div>
+
+</div>
+
+`;
+
+}
+
+mostrarFavorito();
+
+/* ===== COMPARAR ===== */
+
+document.getElementById("p1").addEventListener("change",comparar);
+document.getElementById("p2").addEventListener("change",comparar);
+
+function comparar(){
+
+const i1=document.getElementById("p1").value;
+const i2=document.getElementById("p2").value;
+
+const piloto1=pilotos[i1];
+const piloto2=pilotos[i2];
+
+const diff=piloto1.points-piloto2.points;
+
+document.getElementById("resultadoComparacion").innerHTML=`
+
+<strong>${piloto1.Driver.familyName}</strong>
+vs
+<strong>${piloto2.Driver.familyName}</strong>
+
+<br><br>
+
+Diferencia: <strong>${Math.abs(diff)} puntos</strong>
+
+${diff>0?"a favor de "+piloto1.Driver.familyName:
+diff<0?"a favor de "+piloto2.Driver.familyName:
+"(Empate)"}
+
+`;
+
+}
+
+});
+
+}
+
+cargarClasificacion(year);
+
+</script>
+
+</body>
+</html>

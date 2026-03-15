@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Última Carrera</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>🏁 Última Carrera</h1>
+
+<div id="resultados" class="card">
+    Cargando resultados...
+</div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+fetch("https://api.jolpi.ca/ergast/f1/current/last/results.json")
+.then(response => response.json())
+.then(data => {
+
+    const carreras = data.MRData.RaceTable.Races;
+
+    if (!carreras || carreras.length === 0) {
+        document.getElementById("resultados").innerHTML =
+            "⏳ Aún no se ha disputado ninguna carrera esta temporada.";
+        return;
+    }
+
+    const carrera = carreras[0];
+    const resultados = carrera.Results;
+
+    let html = `
+        <h2>${carrera.raceName}</h2>
+        <p>📍 ${carrera.Circuit.circuitName}</p>
+        <hr>
+    `;
+
+    resultados.forEach(p => {
+
+        let estilo = "";
+
+        if (p.position === "1") estilo = "color:gold; font-weight:bold;";
+        if (p.position === "2") estilo = "color:silver; font-weight:bold;";
+        if (p.position === "3") estilo = "color:#cd7f32; font-weight:bold;";
+
+        html += `
+            <p style="${estilo}">
+                #${p.position} - ${p.Driver.givenName} ${p.Driver.familyName}
+                (${p.Constructor.name})
+            </p>
+        `;
+    });
+
+    document.getElementById("resultados").innerHTML = html;
+
+})
+.catch(error => {
+    document.getElementById("resultados").innerHTML =
+        "No hay resultados disponibles todavía.";
+});
+</script>
+
+</body>
+</html>

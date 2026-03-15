@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+<title>Directo - Formula 1</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<style>
+
+.live{
+color:red;
+font-weight:bold;
+animation:parpadeo 1s infinite;
+}
+
+@keyframes parpadeo{
+0%{opacity:1}
+50%{opacity:0.3}
+100%{opacity:1}
+}
+
+.estado{
+margin-top:10px;
+font-size:14px;
+color:#aaa;
+}
+
+input{
+width:100%;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
+}
+
+#canales button{
+width:100%;
+margin-top:8px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1 class="titulo"> Directo F1 <span class="live"> EN DIRECTO</span></h1>
+
+
+<!-- CANALES ACESTREAM -->
+
+<div class="card fade-in">
+<a href="acestream://d65257bb934b73647374224fd62d836815804be2" class="btn">
+ Formula 1
+</a>
+</div>
+
+<div class="card fade-in">
+<a href="acestream://651dd1e689a9a7d3b0695191dcf44b4d6e7541eb" class="btn">
+ Canal Rally ingles
+</a>
+</div>
+
+<div class="card fade-in">
+<a href="acestream://895d08633bb22c2573281655cf3ca44de476cc73" class="btn">
+ Canal F1
+</a>
+</div>
+
+<div class="card fade-in">
+<a href="acestream://91b2a1fe85f5bb4a6cf9ef6d01cc65883d986920" class="btn">
+ Canal champions
+</a>
+</div>
+
+
+<!-- BOTON CARGAR LISTA LOCAL -->
+
+<div class="card fade-in">
+<button class="btn" onclick="cargarListaLocal()">
+ Cargar lista IPTV local
+</button>
+</div>
+
+
+<!-- CARGAR LISTA POR URL -->
+
+<div class="card fade-in">
+
+<input id="m3uUrl" placeholder="Pega aquí tu lista M3U">
+
+<button class="btn" onclick="cargarM3U()">
+ Cargar lista M3U
+</button>
+
+</div>
+
+
+<!-- CANALES GENERADOS -->
+
+<div class="card fade-in">
+<div id="canales"></div>
+</div>
+
+
+<!-- REPRODUCTOR -->
+
+<div class="card fade-in">
+
+<video id="video"
+controls
+autoplay
+style="width:100%;border-radius:12px;"></video>
+
+<div id="estado" class="estado">
+esperando conexión...
+</div>
+
+</div>
+
+
+<div class="card fade-in">
+<button class="btn" onclick="recargarStream()">
+ Recargar stream
+</button>
+</div>
+
+
+<a href="index.html" class="btn"> Volver</a>
+
+
+<script>
+
+let hls=null;
+
+
+/* REPRODUCIR STREAM */
+
+function reproducir(url){
+
+const video=document.getElementById("video");
+const estado=document.getElementById("estado");
+
+estado.innerHTML="conectando...";
+
+url=url.trim()+"?t="+Date.now();
+
+video.muted=true;
+
+if(Hls.isSupported()){
+
+if(hls){
+hls.destroy();
+}
+
+hls=new Hls({
+enableWorker:true,
+lowLatencyMode:true
+});
+
+hls.loadSource(url);
+hls.attachMedia(video);
+
+hls.on(Hls.Events.MANIFEST_PARSED,function(){
+
+estado.innerHTML=" en directo";
+video.play();
+
+});
+
+hls.on(Hls.Events.ERROR,function(){
+
+estado.innerHTML="reconectando...";
+
+setTimeout(()=>{
+reproducir(url);
+},4000);
+
+});
+
+}
+
+else{
+
+video.src=url;
+video.play();
+
+estado.innerHTML=" en directo";
+
+}
+
+}
+
+
+/* CARGAR LISTA M3U DESDE URL */
+
+function cargarM3U(){
+
+let url=document.getElementById("m3uUrl").value;
+
+fetch(url)
+.then(r=>r.text())
+.then(data=>mostrarCanales(data));
+
+}
+
+
+/* CARGAR LISTA LOCAL */
+
+function cargarListaLocal(){
+
+fetch("espana.m3u8")
+.then(r=>r.text())
+.then(data=>mostrarCanales(data));
+
+}
+
+
+/* GENERAR CANALES */
+
+function mostrarCanales(data){
+
+let lineas=data.split("\n");
+
+let contenedor=document.getElementById("canales");
+
+contenedor.innerHTML="";
+
+for(let i=0;i<lineas.length;i++){
+
+if(lineas[i].startsWith("#EXTINF")){
+
+let nombre=lineas[i].split(",")[1];
+
+let stream=lineas[i+1];
+
+if(stream){
+
+let btn=document.createElement("button");
+
+btn.className="btn";
+btn.innerText=" "+nombre;
+
+btn.onclick=function(){
+reproducir(stream);
+};
+
+contenedor.appendChild(btn);
+
+}
+
+}
+
+}
+
+}
+
+
+/* RECARGAR STREAM */
+
+function recargarStream(){
+
+const video=document.getElementById("video");
+
+if(video.src){
+reproducir(video.src);
+}
+
+}
+
+
+/* DETECTOR STREAM CONGELADO */
+
+setInterval(()=>{
+
+const video=document.getElementById("video");
+
+if(video.readyState===0){
+recargarStream();
+}
+
+},45000);
+
+
+</script>
+
+</body>
+</html>

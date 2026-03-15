@@ -1,0 +1,201 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Live Track Map</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>
+
+body{
+background:black;
+color:white;
+font-family:Arial;
+text-align:center;
+padding:20px;
+}
+
+.card{
+background:#111;
+padding:25px;
+border-radius:15px;
+box-shadow:0 0 20px #00bcd4;
+margin-bottom:20px;
+}
+
+canvas{
+background:#000;
+border-radius:12px;
+box-shadow:0 0 20px #00bcd4;
+}
+
+.btn{
+display:block;
+background:#00bcd4;
+padding:12px;
+border-radius:10px;
+text-decoration:none;
+color:black;
+margin-top:20px;
+font-weight:bold;
+}
+
+</style></head><body><h1> Live Track Map</h1><div class="card"><canvas id="mapa" width="350" height="350"></canvas>
+
+<div id="estado" style="margin-top:15px;opacity:0.7;">
+Buscando sesión...
+</div></div><a href="index.html" class="btn"> Volver</a>
+
+<script>
+
+let sessionKey=null;
+let pilotos=[];
+
+const canvas=document.getElementById("mapa");
+const ctx=canvas.getContext("2d");
+
+/* obtener sesión */
+
+async function obtenerSesion(){
+
+try{
+
+const sesiones=await fetch(
+"https://api.openf1.org/v1/sessions?limit=1"
+).then(r=>r.json());
+
+sessionKey=sesiones[0].session_key;
+
+document.getElementById("estado").innerText="Sesión detectada";
+
+}catch{
+
+document.getElementById("estado").innerText="No hay sesión activa";
+
+}
+
+}
+
+/* cargar posiciones */
+
+async function cargarPosiciones(){
+
+if(!sessionKey) return;
+
+try{
+
+const data=await fetch(
+`https://api.openf1.org/v1/location?session_key=${sessionKey}&limit=50`
+).then(r=>r.json());
+
+pilotos=data;
+
+}catch{}
+
+}
+
+/* dibujar pista */
+
+function dibujarPista(){
+
+const cx=175;
+const cy=175;
+const r=140;
+
+/* sector 1 */
+
+ctx.strokeStyle="#a100ff";
+ctx.lineWidth=4;
+
+ctx.beginPath();
+ctx.arc(cx,cy,r,0,2*Math.PI/3);
+ctx.stroke();
+
+/* sector 2 */
+
+ctx.strokeStyle="#ffd000";
+
+ctx.beginPath();
+ctx.arc(cx,cy,r,2*Math.PI/3,4*Math.PI/3);
+ctx.stroke();
+
+/* sector 3 */
+
+ctx.strokeStyle="#00e5ff";
+
+ctx.beginPath();
+ctx.arc(cx,cy,r,4*Math.PI/3,2*Math.PI);
+ctx.stroke();
+
+/* DRS zone */
+
+ctx.strokeStyle="#00ff6a";
+ctx.lineWidth=6;
+
+ctx.beginPath();
+ctx.arc(cx,cy,r,Math.PI*1.8,Math.PI*1.95);
+ctx.stroke();
+
+}
+
+/* dibujar coches */
+
+function dibujarCoches(){
+
+pilotos.forEach(p=>{
+
+let x=(p.x/100)*canvas.width;
+let y=(p.y/100)*canvas.height;
+
+ctx.fillStyle="#ffffff";
+
+ctx.beginPath();
+ctx.arc(x,y,6,0,2*Math.PI);
+ctx.fill();
+
+ctx.fillStyle="#00e5ff";
+ctx.font="10px Arial";
+
+ctx.fillText(p.driver_number,x+8,y+4);
+
+});
+
+}
+
+/* dibujar todo */
+
+function dibujar(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+dibujarPista();
+
+if(pilotos.length===0){
+
+ctx.fillStyle="#00e5ff";
+ctx.fillText("Esperando datos...",120,170);
+
+return;
+
+}
+
+dibujarCoches();
+
+}
+
+/* loop */
+
+async function actualizar(){
+
+await cargarPosiciones();
+
+dibujar();
+
+}
+
+/* iniciar */
+
+async function iniciar(){
+
+await obtenerSesion();
+
+setInterval(actualizar,2000);
+
+}
+
+iniciar();
+
+</script></body></html>

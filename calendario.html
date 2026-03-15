@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Calendario F1</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h1 class="titulo">📅 Calendario F1</h1>
+
+<div id="calendario"></div>
+
+<a href="index.html" class="btn">⬅ Volver</a>
+
+<script>
+
+// ===============================
+// API PRINCIPAL
+// ===============================
+
+async function cargarErgast(){
+
+try{
+
+const res = await fetch("https://api.jolpi.ca/ergast/f1/current.json");
+
+if(!res.ok) throw "error";
+
+const data = await res.json();
+
+return data.MRData.RaceTable.Races;
+
+}catch(e){
+
+return null;
+
+}
+
+}
+
+// ===============================
+// API SECUNDARIA
+// ===============================
+
+async function cargarOpenF1(){
+
+try{
+
+const res = await fetch("https://api.openf1.org/v1/meetings");
+
+if(!res.ok) throw "error";
+
+const data = await res.json();
+
+return data.map(m=>({
+
+raceName:m.meeting_name,
+
+Circuit:{
+circuitName:m.circuit_short_name
+},
+
+date:m.date_start,
+
+time:"00:00:00",
+
+round:m.meeting_key
+
+}));
+
+}catch(e){
+
+return null;
+
+}
+
+}
+
+// ===============================
+// CONVERTIR HORA
+// ===============================
+
+function convertirHora(fecha, hora) {
+
+if (!fecha) return null;
+
+const fechaUTC = new Date(fecha + (hora ? "T" + hora : ""));
+
+return {
+
+fechaObj: fechaUTC,
+
+texto: fechaUTC.toLocaleString("es-ES", {
+
+timeZone: "Europe/Madrid",
+day: "2-digit",
+month: "2-digit",
+hour: "2-digit",
+minute: "2-digit"
+
+})
+
+};
+
+}
+
+// ===============================
+// GENERAR CALENDARIO
+// ===============================
+
+async function generarCalendario(){
+
+let carreras = await cargarErgast();
+
+if(!carreras){
+
+console.log("Ergast fallo → usando OpenF1");
+
+carreras = await cargarOpenF1();
+
+}
+
+if(!carreras){
+
+document.getElementById("calendario").innerHTML="Error cargando calendario";
+return;
+
+}
+
+const ahora = new Date();
+
+// ordenar carreras
+carreras.sort((a,b)=> new Date(a.date)-new Date(b.date));
+
+let html = "";
+let proximaEncontrada = false;
+
+carreras.forEach(carrera => {
+
+const datosCarrera = convertirHora(carrera.date, carrera.time);
+if(!datosCarrera) return;
+
+let claseExtra = "card calendario-card";
+
+if (datosCarrera.fechaObj < ahora) {
+
+claseExtra += " terminada";
+
+}
+
+else if (!proximaEncontrada) {
+
+claseExtra += " destacada";
+proximaEncontrada = true;
+
+}
+
+let esSprint = carrera.Sprint ? " ⚡ Sprint" : "";
+
+html += `
+<div class="${claseExtra}">
+
+<div class="gp-title">
+<a href="gp.html?round=${carrera.round}">
+${carrera.raceName}
+</a>
+${esSprint}
+</div>
+
+<div class="gp-circuit">
+📍 ${carrera.Circuit?.circuitName || ""}
+</div>
+
+${carrera.FirstPractice ? `
+<div class="gp-event">
+<span>FP1</span>
+<span>${convertirHora(carrera.FirstPractice.date, carrera.FirstPractice.time)?.texto || "-"}</span>
+</div>` : ""}
+
+${carrera.SecondPractice ? `
+<div class="gp-event">
+<span>FP2</span>
+<span>${convertirHora(carrera.SecondPractice.date, carrera.SecondPractice.time)?.texto || "-"}</span>
+</div>` : ""}
+
+${carrera.ThirdPractice ? `
+<div class="gp-event">
+<span>FP3</span>
+<span>${convertirHora(carrera.ThirdPractice.date, carrera.ThirdPractice.time)?.texto || "-"}</span>
+</div>` : ""}
+
+${carrera.SprintQualifying ? `
+<div class="gp-event">
+<span>🟣 Sprint Shootout</span>
+<span>${convertirHora(carrera.SprintQualifying.date, carrera.SprintQualifying.time)?.texto || "-"}</span>
+</div>` : ""}
+
+${carrera.Sprint ? `
+<div class="gp-event">
+<span>⚡ Sprint</span>
+<span>${convertirHora(carrera.Sprint.date, carrera.Sprint.time)?.texto || "-"}</span>
+</div>` : ""}
+
+${carrera.Qualifying ? `
+<div class="gp-event">
+<span>⏱ Clasificación</span>
+<span>${convertirHora(carrera.Qualifying.date, carrera.Qualifying.time)?.texto || "-"}</span>
+</div>` : ""}
+
+<hr class="divider">
+
+<div class="gp-event carrera">
+<span>🏁 Carrera</span>
+<span>${datosCarrera.texto}</span>
+</div>
+
+<div class="mini-countdown"
+data-fecha="${datosCarrera.fechaObj.toISOString()}">
+⏳ Calculando...
+</div>
+
+</div>
+`;
+
+});
+
+document.getElementById("calendario").innerHTML = html;
+
+iniciarContadores();
+
+}
+
+// ===============================
+// CONTADOR ORIGINAL
+// ===============================
+
+function iniciarContadores() {
+
+function actualizar() {
+
+const ahora = new Date();
+const contadores = document.querySelectorAll(".mini-countdown");
+
+contadores.forEach(el => {
+
+const fecha = new Date(el.dataset.fecha);
+const diferencia = fecha - ahora;
+
+if (diferencia <= 0) {
+
+const hoy = ahora.toDateString() === fecha.toDateString();
+
+if(hoy){
+
+el.innerHTML = "🟢 DÍA DE CARRERA";
+el.className = "mini-countdown verde";
+
+}else{
+
+el.innerHTML = "🏁 Carrera terminada";
+el.className = "mini-countdown";
+
+}
+
+return;
+
+}
+
+const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+const horas = Math.floor((diferencia / (1000 * 60 * 60)) % 24);
+const minutos = Math.floor((diferencia / (1000 * 60)) % 60);
+const segundos = Math.floor((diferencia / 1000) % 60);
+
+el.className = "mini-countdown";
+
+if (dias > 21) el.classList.add("rojo");
+else if (dias > 14) el.classList.add("azul");
+else if (dias > 7) el.classList.add("morado");
+else if (dias > 3) el.classList.add("amarillo");
+else if (dias > 1) el.classList.add("naranja");
+else if (dias === 0 && horas > 1) el.classList.add("verde");
+else if (horas <= 1) el.classList.add("ultima-hora");
+
+el.innerHTML =
+`⏳ ${dias}d ${horas}h ${minutos}m ${segundos}s`;
+
+});
+
+}
+
+actualizar();
+setInterval(actualizar, 1000);
+
+}
+
+// iniciar
+generarCalendario();
+
+</script>
+
+</body>
+</html>
