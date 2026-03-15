@@ -1,4 +1,4 @@
-const VERSION = "v7"; // cambia cuando actualices
+const VERSION = "v8"; // cambia cuando actualices
 
 const CACHE_NAME = "f1-app-" + VERSION;
 
